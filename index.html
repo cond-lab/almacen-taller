@@ -239,7 +239,7 @@
         <div id="sub-enajenar"></div>
       </div>
       <div class="page" id="page-enajenados">
-        <div class="page-header"><div><div class="page-title">Enajenados</div><div class="page-subtitle">Retirados por gestora de residuos</div></div></div>
+        <div class="page-header"><div><div class="page-title">Enajenados</div><div class="page-subtitle">Retirados por gestora de residuos</div></div><button class="btn btn-secondary" onclick="exportEnajenados()">⬇ Exportar Excel</button></div>
         <div id="sub-enajenados"></div>
       </div>
 
@@ -903,6 +903,32 @@ async function lookupEtiquetaForm(val){
       showNotif('Datos cargados: '+src.codigo,'success');
     }
   } catch(e){ console.warn('lookup error:',e); }
+}
+
+function exportEnajenados(){
+  const equipos=db.equipos.filter(e=>e.estado==='enajenado');
+  if(!equipos.length){showNotif('No hay equipos enajenados','error');return}
+  // Build CSV (without ubicacion)
+  const cols=['etiqueta','tipo','marca','modelo','serie','fecha_enaj','obs'];
+  const headers=['Etiqueta','Tipología','Marca','Modelo','Nº Serie','Fecha Enajenación','Observaciones'];
+  const rows=[headers.join(';')];
+  equipos.forEach(e=>{
+    const row=cols.map(col=>{
+      const val=e[col]||'';
+      // escape semicolons and quotes
+      return '"'+String(val).replace(/"/g,'""')+'"';
+    });
+    rows.push(row.join(';'));
+  });
+  const csv='﻿'+rows.join('\n'); // BOM for Excel UTF-8
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='enajenados_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotif('Exportado: '+equipos.length+' equipos','success');
 }
 // ==================== INIT ====================
 // DB loaded after login via loadAll()
