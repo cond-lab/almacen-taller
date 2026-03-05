@@ -881,34 +881,28 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 function showNotif(msg,type='success'){const n=g('notif');n.textContent=msg;n.className=`notif ${type} show`;setTimeout(()=>n.classList.remove('show'),3200)}
 
 
-function lookupEtiquetaForm(val){
-  // populate datalist
+async function lookupEtiquetaForm(val){
   const dl=g('etiquetas-list');
-  if(dl){
-    const matches=db.equipos.filter(e=>e.etiqueta&&e.etiqueta.toLowerCase().includes(val.toLowerCase()));
-    dl.innerHTML=matches.map(e=>`<option value="${e.etiqueta}">${e.tipo||''} ${e.marca||''} ${e.modelo||''}</option>`).join('');
-  }
-  if(!val.trim())return;
-  // exact or single match → autofill
-  const exact=db.equipos.find(e=>e.etiqueta&&e.etiqueta.toLowerCase()===val.toLowerCase());
-  const partial=db.equipos.filter(e=>e.etiqueta&&e.etiqueta.toLowerCase().includes(val.toLowerCase()));
-  const src=exact||(partial.length===1?partial[0]:null);
-  if(src){
-    if(src.tipo)g('eq-tipo').value=src.tipo;
-    if(src.marca)g('eq-marca').value=src.marca;
-    if(src.modelo)g('eq-modelo').value=src.modelo;
-    if(src.serie)g('eq-serie').value=src.serie;
-    if(src.ubicacion)g('eq-ubicacion').value=src.ubicacion;
-    if(src.obs)g('eq-obs').value=src.obs;
-    g('eq-estado').value=src.estado;
-    onEstadoChange();
-    // load piezas if despiezado
-    if(src.estado==='despiezado'){
-      g('piezas-list').innerHTML='';
-      db.piezas.filter(p=>p.equipoId===src.id).forEach(p=>addPiezaEdit(p));
+  if(!val.trim()){if(dl)dl.innerHTML='';return;}
+  try {
+    // Search in inventario table
+    const rows = await sbGet('inventario',
+      `codigo=ilike.*${encodeURIComponent(val)}*&limit=10&order=codigo.asc`
+    );
+    // populate datalist suggestions
+    if(dl && rows){
+      dl.innerHTML=rows.map(r=>`<option value="${r.codigo}">${r.tipo||''} ${r.marca||''} ${r.modelo||''}</option>`).join('');
     }
-    showNotif('Datos cargados desde inventario: '+src.etiqueta,'success');
-  }
+    // autofill if exact match or single result
+    const src = rows && (rows.find(r=>r.codigo.toLowerCase()===val.toLowerCase()) || (rows.length===1?rows[0]:null));
+    if(src){
+      if(src.tipo)  g('eq-tipo').value=src.tipo;
+      if(src.marca) g('eq-marca').value=src.marca;
+      if(src.modelo)g('eq-modelo').value=src.modelo;
+      if(src.serie) g('eq-serie').value=src.serie;
+      showNotif('Datos cargados: '+src.codigo,'success');
+    }
+  } catch(e){ console.warn('lookup error:',e); }
 }
 // ==================== INIT ====================
 // DB loaded after login via loadAll()
