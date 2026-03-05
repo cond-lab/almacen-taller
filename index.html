@@ -164,8 +164,8 @@
         <div class="nav-item" onclick="showPage('despiezados')" id="nav-despiezados"><div class="nav-dot" style="background:var(--purple)"></div>Despiezados<span class="count-badge" id="ncd">0</span></div>
         <div class="nav-item" onclick="showPage('almacenados')" id="nav-almacenados"><div class="nav-dot" style="background:var(--blue)"></div>Almacenados<span class="count-badge" id="ncal">0</span></div>
         <div class="nav-item" onclick="showPage('baja')" id="nav-baja"><div class="nav-dot" style="background:var(--red)"></div>Baja<span class="count-badge" id="ncb">0</span></div>
-        <div class="nav-item" onclick="showPage('enajenar')" id="nav-enajenar"><div class="nav-dot" style="background:var(--orange)"></div>Para enajenar<span class="count-badge" id="nce">0</span></div>
-        <div class="nav-item" onclick="showPage('enajenados')" id="nav-enajenados"><div class="nav-dot" style="background:var(--green)"></div>Enajenados<span class="count-badge" id="ncen">0</span></div>
+        <div class="nav-item" onclick="showPage('enajenar')" id="nav-enajenar"><div class="nav-dot" style="background:var(--orange)"></div>Retirado<span class="count-badge" id="nce">0</span></div>
+        <div class="nav-item" onclick="showPage('enajenados')" id="nav-enajenados"><div class="nav-dot" style="background:var(--green)"></div>Destruido<span class="count-badge" id="ncen">0</span></div>
       </div>
       <div class="nav-section" id="nav-admin-section">
         <div class="nav-label">Administración</div>
@@ -187,7 +187,7 @@
           <div class="stat-card"><div><div class="stat-value" style="color:var(--purple)" id="st1">0</div><div class="stat-label">Despiezados</div></div><div class="stat-icon">🔧</div></div>
           <div class="stat-card"><div><div class="stat-value" style="color:var(--blue)" id="st2">0</div><div class="stat-label">Almacenados</div></div><div class="stat-icon">🗄️</div></div>
           <div class="stat-card"><div><div class="stat-value" style="color:var(--red)" id="st3">0</div><div class="stat-label">Baja</div></div><div class="stat-icon">🚫</div></div>
-          <div class="stat-card"><div><div class="stat-value" style="color:var(--green)" id="st4">0</div><div class="stat-label">Enajenados</div></div><div class="stat-icon">✅</div></div>
+          <div class="stat-card"><div><div class="stat-value" style="color:var(--green)" id="st4">0</div><div class="stat-label">Destruidos</div></div><div class="stat-icon">✅</div></div>
         </div>
         <!-- LOOKUP -->
         <div class="lookup-bar">
@@ -228,7 +228,7 @@
         <div id="sub-baja"></div>
       </div>
       <div class="page" id="page-enajenar">
-        <div class="page-header"><div><div class="page-title">Para Enajenar</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
+        <div class="page-header"><div><div class="page-title">Retirado</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-enaj-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:200px"></div>
           <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-enaj-marca" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todas</option></select></div>
@@ -239,7 +239,7 @@
         <div id="sub-enajenar"></div>
       </div>
       <div class="page" id="page-enajenados">
-        <div class="page-header"><div><div class="page-title">Enajenados</div><div class="page-subtitle">Retirados por gestora de residuos</div></div><button class="btn btn-secondary" onclick="exportEnajenados()">⬇ Exportar Excel</button></div>
+        <div class="page-header"><div><div class="page-title">Destruido</div><div class="page-subtitle">Destruidos por gestora de residuos</div></div><button class="btn btn-secondary" onclick="exportEnajenados()">⬇ Exportar Excel</button></div>
         <div id="sub-enajenados"></div>
       </div>
 
@@ -272,8 +272,8 @@
             <option value="despiezado">Despiezado</option>
             <option value="almacenado">Almacenado</option>
             <option value="baja">Baja</option>
-            <option value="enajenar">Para enajenar</option>
-            <option value="enajenado">Enajenado</option>
+            <option value="enajenar">Retirado</option>
+            <option value="enajenado">Destruido</option>
           </select>
         </div>
       </div>
@@ -287,7 +287,7 @@
       </div>
       <div class="form-row">
         <div class="form-group"><label>UBICACIÓN EN ALMACÉN</label><input type="text" id="eq-ubicacion" placeholder="Estante A3, Caja 12..."></div>
-        <div class="form-group" id="grupo-fecha-enaj" style="display:none"><label>FECHA ENAJENACIÓN</label><input type="date" id="eq-fecha-enaj"></div>
+        <div class="form-group" id="grupo-fecha-enaj" style="display:none"><label>FECHA DESTRUCCIÓN</label><input type="date" id="eq-fecha-enaj"></div>
       </div>
       <div class="form-row full"><div class="form-group"><label>OBSERVACIONES</label><textarea id="eq-obs" placeholder="Notas adicionales..."></textarea></div></div>
       <div id="piezas-section" style="display:none">
@@ -520,10 +520,10 @@ const ELBL={
   despiezado:'<span class="badge badge-despiezado">🔧 Despiezado</span>',
   almacenado:'<span class="badge badge-almacenado">📦 Almacenado</span>',
   baja:'<span class="badge badge-baja">🚫 Baja</span>',
-  enajenar:'<span class="badge badge-enajenar">⏳ Para enajenar</span>',
-  enajenado:'<span class="badge badge-enajenado">✅ Enajenado</span>',
+  enajenar:'<span class="badge badge-enajenar">📤 Retirado</span>',
+  enajenado:'<span class="badge badge-enajenado">♻️ Destruido</span>',
 };
-const ELBL_T={despiezado:'Despiezado',almacenado:'Almacenado',baja:'Baja',enajenar:'Para enajenar',enajenado:'Enajenado'};
+const ELBL_T={despiezado:'Despiezado',almacenado:'Almacenado',baja:'Baja',enajenar:'Retirado',enajenado:'Destruido'};
 
 // ==================== TABLE ROW ====================
 function eRow(e){
@@ -532,8 +532,8 @@ function eRow(e){
   if(ce){
     act+=` <button class="btn btn-secondary btn-sm" onclick="editEquipo(${e.id})">Editar</button>`;
     act+=` <button class="btn btn-secondary btn-sm" onclick="duplicar(${e.id})" title="Duplicar">⧉</button>`;
-    if(e.estado==='baja') act+=` <button class="btn btn-warn btn-sm" onclick="toEnajenar(${e.id})">→ Enajenar</button>`;
-    if(e.estado==='enajenar') act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Enajenado</button>`;
+    if(e.estado==='baja') act+=` <button class="btn btn-warn btn-sm" onclick="toEnajenar(${e.id})">→ Retirado</button>`;
+    if(e.estado==='enajenar') act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Destruido</button>`;
   }
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
   const hl=hlId===e.id?' class="hl-row"':'';
@@ -602,10 +602,10 @@ async function toEnajenar(id){
   try {
     const e=db.equipos.find(x=>x.id===id);
     await sbPatch('equipos','id=eq.'+id,{estado:'enajenar'});
-    await logSB(id,'Estado → Para enajenar',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
+    await logSB(id,'Estado → Retirado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
     await loadAll(); refresh();
     renderSub('baja','sub-baja'); renderSub('enajenar','sub-enajenar');
-    showNotif('Equipo movido a "Para enajenar"','success');
+    showNotif('Equipo marcado como Retirado','success');
   } catch(e) { showNotif('Error: '+e.message,'error'); }
   showLoading(false);
 }
@@ -615,10 +615,10 @@ async function toEnajenado(id){
     const e=db.equipos.find(x=>x.id===id);
     const hoy=new Date().toISOString().split('T')[0];
     await sbPatch('equipos','id=eq.'+id,{estado:'enajenado',fecha_enaj:hoy});
-    await logSB(id,'Enajenado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
+    await logSB(id,'Destruido',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
     await loadAll(); refresh();
     renderSub('enajenar','sub-enajenar'); renderSub('enajenado','sub-enajenados');
-    showNotif('Enajenado. Fecha registrada: '+hoy,'success');
+    showNotif('Destruido. Fecha registrada: '+hoy,'success');
   } catch(e) { showNotif('Error: '+e.message,'error'); }
   showLoading(false);
 }
@@ -776,7 +776,7 @@ function verDetalle(id){
       <div><div class="detail-label">Nº Serie</div><div class="detail-value mono">${e.serie||'—'}</div></div>
       <div><div class="detail-label">Etiqueta inventario</div><div class="detail-value mono">${e.etiqueta||'—'}</div></div>
       <div><div class="detail-label">Ubicación</div><div class="detail-value">${e.ubicacion||'—'}</div></div>
-      ${e.fecha_enaj?`<div><div class="detail-label">Fecha enajenación</div><div class="detail-value">${e.fecha_enaj}</div></div>`:''}
+      ${e.fecha_enaj?`<div><div class="detail-label">Fecha destrucción</div><div class="detail-value">${e.fecha_enaj}</div></div>`:''}
     </div>
     ${e.obs?`<div style="margin-bottom:16px"><div class="detail-label">Observaciones</div><div style="margin-top:4px;color:var(--text2);font-size:13px;line-height:1.6">${e.obs}</div></div>`:''}
     ${pzHtml}
@@ -786,8 +786,8 @@ function verDetalle(id){
   if(ce){
     ft+=` <button class="btn btn-secondary" onclick="closeModal('modal-detalle');duplicar(${id})" title="Duplicar para otro departamento">⧉ Duplicar</button>`;
     ft+=` <button class="btn btn-primary" onclick="closeModal('modal-detalle');editEquipo(${id})">Editar</button>`;
-    if(e.estado==='baja') ft+=` <button class="btn btn-warn" onclick="closeModal('modal-detalle');toEnajenar(${id})">→ Para enajenar</button>`;
-    if(e.estado==='enajenar') ft+=` <button class="btn btn-success" onclick="closeModal('modal-detalle');toEnajenado(${id})">→ Enajenado</button>`;
+    if(e.estado==='baja') ft+=` <button class="btn btn-warn" onclick="closeModal('modal-detalle');toEnajenar(${id})">→ Retirado</button>`;
+    if(e.estado==='enajenar') ft+=` <button class="btn btn-success" onclick="closeModal('modal-detalle');toEnajenado(${id})">→ Destruido</button>`;
   }
   g('mdet-footer').innerHTML=ft;
   g('modal-detalle').classList.add('open');
@@ -907,10 +907,10 @@ async function lookupEtiquetaForm(val){
 
 function exportEnajenados(){
   const equipos=db.equipos.filter(e=>e.estado==='enajenado');
-  if(!equipos.length){showNotif('No hay equipos enajenados','error');return}
+  if(!equipos.length){showNotif('No hay equipos destruidos','error');return}
   // Build CSV (without ubicacion)
   const cols=['etiqueta','tipo','marca','modelo','serie','fecha_enaj','obs'];
-  const headers=['Etiqueta','Tipología','Marca','Modelo','Nº Serie','Fecha Enajenación','Observaciones'];
+  const headers=['Etiqueta','Tipología','Marca','Modelo','Nº Serie','Fecha Destrucción','Observaciones'];
   const rows=[headers.join(';')];
   equipos.forEach(e=>{
     const row=cols.map(col=>{
@@ -925,7 +925,7 @@ function exportEnajenados(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download='enajenados_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.download='destruidos_'+new Date().toISOString().split('T')[0]+'.csv';
   a.click();
   URL.revokeObjectURL(url);
   showNotif('Exportado: '+equipos.length+' equipos','success');
