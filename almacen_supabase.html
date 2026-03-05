@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Almacén — Control de Equipos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f0f0f;--surface:#171717;--surface2:#1e1e1e;--border:#2a2a2a;--border2:#333;--text:#e8e8e8;--text2:#888;--text3:#555;--accent:#f0a500;--accent2:#c47f00;--green:#22c55e;--blue:#3b82f6;--red:#ef4444;--orange:#f97316;--purple:#a855f7;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh}
+  #app{display:flex;flex-direction:column;min-height:100vh}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:var(--accent);letter-spacing:.05em}
+  .logo span{color:var(--text2);font-weight:400}
+  .user-info{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
+  .user-badge{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent)}
+  .btn-logout{background:none;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
+  .btn-logout:hover{border-color:var(--red);color:var(--red)}
+  main{display:flex;flex:1}
+  nav{width:215px;background:var(--surface);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+  .nav-section{margin-bottom:24px}
+  .nav-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;padding:0 16px 8px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;color:var(--text2);font-size:13px;transition:all .15s;border-left:2px solid transparent}
+  .nav-item:hover{color:var(--text);background:var(--surface2)}
+  .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(240,165,0,.05)}
+  .nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  content-area{flex:1;padding:24px;overflow-y:auto;display:block}
+  .page{display:none}.page.active{display:block}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .page-title{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600}
+  .page-subtitle{color:var(--text2);font-size:12px;margin-top:2px}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;border:none;transition:all .15s;white-space:nowrap}
+  .btn-primary{background:var(--accent);color:#000}.btn-primary:hover{background:var(--accent2)}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}.btn-danger:hover{background:rgba(239,68,68,.2)}
+  .btn-warn{background:rgba(249,115,22,.1);color:var(--orange);border:1px solid rgba(249,115,22,.3)}.btn-warn:hover{background:rgba(249,115,22,.2)}
+  .btn-success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.3)}.btn-success:hover{background:rgba(34,197,94,.2)}
+  .btn-sm{padding:4px 10px;font-size:12px}
+  .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;display:flex;align-items:center;justify-content:space-between}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600}
+  .stat-label{color:var(--text2);font-size:12px;margin-top:2px}
+  .stat-icon{font-size:22px;opacity:.6}
+  .lookup-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 16px;display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .lookup-result{background:rgba(240,165,0,.08);border:1px solid rgba(240,165,0,.3);border-radius:4px;padding:5px 12px;font-size:13px;color:var(--accent);display:none}
+  .filters-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
+  .filter-group{display:flex;align-items:center;gap:6px}
+  .filter-label{color:var(--text2);font-size:12px;font-family:'IBM Plex Mono',monospace}
+  input[type=text],select{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
+  input[type=text]:focus,select:focus{border-color:var(--accent)}
+  select option{background:var(--surface2)}
+  .search-input{min-width:240px}
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead{background:var(--surface2)}
+  th{text-align:left;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  tr.hl-row td{background:rgba(240,165,0,.06)!important}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:500;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+  .badge-despiezado{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+  .badge-almacenado{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+  .badge-baja{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+  .badge-enajenar{background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3)}
+  .badge-enajenado{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+  .actions{display:flex;gap:4px;flex-wrap:wrap}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto}
+  .modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .modal-title{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600}
+  .modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1;transition:color .15s}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:20px}
+  .modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .form-row.full{grid-template-columns:1fr}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  label{font-size:12px;color:var(--text2);font-family:'IBM Plex Mono',monospace}
+  textarea{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;resize:vertical;min-height:70px;transition:border-color .15s;width:100%}
+  textarea:focus{border-color:var(--accent)}
+  input[type=date]{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;width:100%;transition:border-color .15s}
+  input[type=date]:focus{border-color:var(--accent)}
+  input[type=number]{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:6px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;width:100%;transition:border-color .15s}
+  input[type=number]:focus{border-color:var(--accent)}
+  input[type=text]{width:100%}
+  select{width:100%}
+  .piezas-section{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:4px}
+  .piezas-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .piezas-title{font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--text2)}
+  .pieza-edit-row{display:grid;grid-template-columns:2fr 3fr 70px auto;gap:8px;margin-bottom:8px;align-items:center}
+  .pieza-edit-row input{font-size:12px;padding:5px 8px}
+  .btn-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 6px;transition:color .15s}
+  .btn-rm:hover{color:var(--red)}
+  .pieza-view-row{display:grid;grid-template-columns:2fr 3fr 70px auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);align-items:center}
+  .pieza-view-row:last-child{border-bottom:none}
+  .qty{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+  .qty.low{color:var(--orange)}.qty.zero{color:var(--red)}
+  .btn-use{background:none;border:1px solid var(--border2);color:var(--text2);border-radius:3px;padding:2px 8px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
+  .btn-use:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}
+  .btn-use:disabled{opacity:.35;cursor:not-allowed}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+  .detail-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em}
+  .detail-value{color:var(--text);font-size:14px}
+  .section-sep{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+  .login-card{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:40px;width:360px}
+  .login-logo{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--accent);margin-bottom:4px}
+  .login-sub{color:var(--text2);font-size:13px;margin-bottom:32px}
+  .login-card .form-group{margin-bottom:14px}
+  .login-card label{display:block;margin-bottom:5px}
+  .login-card input{width:100%}
+  .login-card .btn{width:100%;justify-content:center;margin-top:20px;padding:10px}
+  .login-error{color:var(--red);font-size:12px;margin-top:8px;display:none}
+  .user-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .user-card-info{display:flex;align-items:center;gap:12px}
+  .user-avatar{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--accent)}
+  .hist-item{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+  .hist-item:last-child{border-bottom:none}
+  .hist-time{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);white-space:nowrap;min-width:135px}
+  .hist-user{color:var(--text3);font-size:12px}
+  .empty-state{padding:48px;text-align:center;color:var(--text3)}
+  .empty-icon{font-size:40px;margin-bottom:12px}
+  .notif{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:12px 18px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .25s;pointer-events:none;max-width:320px}
+  .notif.show{transform:translateY(0);opacity:1}
+  .notif.success{border-left:3px solid var(--green)}
+  .notif.error{border-left:3px solid var(--red)}
+  .count-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);margin-left:auto}
+</style>
+</head>
+<body>
+
+<div id="loading-bar" style="display:none;position:fixed;top:0;left:0;right:0;height:3px;background:var(--accent);z-index:9999;animation:loadpulse 1s ease-in-out infinite"></div>
+<style>@keyframes loadpulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}</style>
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ALMACÉN</div>
+    <div class="login-sub">Control de equipos — Taller</div>
+    <div class="form-group"><label>Usuario</label><input type="text" id="login-user" placeholder="nombre de usuario" autocomplete="off"></div>
+    <div class="form-group"><label>Contraseña</label><input type="text" id="login-pass" placeholder="contraseña"></div>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+    <button class="btn btn-primary" onclick="doLogin()">ENTRAR</button>
+    <div style="margin-top:16px;font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">Demo: admin/admin · editor/editor · consulta/consulta</div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div class="logo">ALMACÉN <span>// control de equipos</span></div>
+    <div class="user-info">
+      <span id="header-username"></span>
+      <span class="user-badge" id="header-role"></span>
+      <button class="btn-logout" onclick="doLogout()">salir</button>
+    </div>
+  </header>
+  <main>
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Inventario</div>
+        <div class="nav-item active" onclick="showPage('equipos')" id="nav-equipos"><div class="nav-dot" style="background:var(--text2)"></div>Todos<span class="count-badge" id="nca">0</span></div>
+        <div class="nav-item" onclick="showPage('despiezados')" id="nav-despiezados"><div class="nav-dot" style="background:var(--purple)"></div>Despiezados<span class="count-badge" id="ncd">0</span></div>
+        <div class="nav-item" onclick="showPage('almacenados')" id="nav-almacenados"><div class="nav-dot" style="background:var(--blue)"></div>Almacenados<span class="count-badge" id="ncal">0</span></div>
+        <div class="nav-item" onclick="showPage('baja')" id="nav-baja"><div class="nav-dot" style="background:var(--red)"></div>Baja<span class="count-badge" id="ncb">0</span></div>
+        <div class="nav-item" onclick="showPage('enajenar')" id="nav-enajenar"><div class="nav-dot" style="background:var(--orange)"></div>Para enajenar<span class="count-badge" id="nce">0</span></div>
+        <div class="nav-item" onclick="showPage('enajenados')" id="nav-enajenados"><div class="nav-dot" style="background:var(--green)"></div>Enajenados<span class="count-badge" id="ncen">0</span></div>
+      </div>
+      <div class="nav-section" id="nav-admin-section">
+        <div class="nav-label">Administración</div>
+        <div class="nav-item" onclick="showPage('usuarios')" id="nav-usuarios"><div class="nav-dot" style="background:var(--accent)"></div>Usuarios</div>
+        <div class="nav-item" onclick="showPage('historial')" id="nav-historial"><div class="nav-dot" style="background:var(--text2)"></div>Historial</div>
+      </div>
+    </nav>
+
+    <content-area style="flex:1;padding:24px;overflow-y:auto;display:block">
+
+      <!-- TODOS -->
+      <div class="page active" id="page-equipos">
+        <div class="page-header">
+          <div><div class="page-title">Todos los equipos</div><div class="page-subtitle">Inventario completo del almacén</div></div>
+          <button class="btn btn-primary" id="btn-nuevo-equipo" onclick="openModalNuevo()">+ Nuevo equipo</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div><div class="stat-value" id="st0">0</div><div class="stat-label">Total</div></div><div class="stat-icon">📦</div></div>
+          <div class="stat-card"><div><div class="stat-value" style="color:var(--purple)" id="st1">0</div><div class="stat-label">Despiezados</div></div><div class="stat-icon">🔧</div></div>
+          <div class="stat-card"><div><div class="stat-value" style="color:var(--blue)" id="st2">0</div><div class="stat-label">Almacenados</div></div><div class="stat-icon">🗄️</div></div>
+          <div class="stat-card"><div><div class="stat-value" style="color:var(--red)" id="st3">0</div><div class="stat-label">Baja</div></div><div class="stat-icon">🚫</div></div>
+          <div class="stat-card"><div><div class="stat-value" style="color:var(--green)" id="st4">0</div><div class="stat-label">Enajenados</div></div><div class="stat-icon">✅</div></div>
+        </div>
+        <!-- LOOKUP -->
+        <div class="lookup-bar">
+          <span class="filter-label">🔍 buscar por etiqueta:</span>
+          <input type="text" id="lookup-input" placeholder="Código de inventario (parcial o completo)..." oninput="lookupEtiqueta(this.value)" style="min-width:280px">
+          <div class="lookup-result" id="lookup-result"></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearLookup()">✕ limpiar</button>
+        </div>
+        <!-- FILTERS -->
+        <div class="filters-bar">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" class="search-input" id="filter-search" placeholder="Marca, modelo, serie, piezas..." oninput="renderTable()"></div>
+          <div class="filter-group"><span class="filter-label">tipo:</span><select id="filter-tipo" onchange="renderTable()"><option value="">Todos</option></select></div>
+          <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-marca" onchange="renderTable()"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">modelo:</span><select id="filter-modelo" onchange="renderTable()"><option value="">Todos</option></select></div>
+          <div class="filter-group"><span class="filter-label">estado:</span><select id="filter-estado" onchange="renderTable()"><option value="">Todos</option></select></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ limpiar</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tabla-equipos"></tbody></table></div>
+      </div>
+
+      <!-- SUB PÁGINAS -->
+      <div class="page" id="page-despiezados">
+        <div class="page-header"><div><div class="page-title">Equipos Despiezados</div><div class="page-subtitle">Desmontados y con piezas inventariadas</div></div><button class="btn btn-primary" id="btn-nuevo-despiezado" onclick="openModalNuevo('despiezado')">+ Nuevo</button></div>
+        <div id="sub-despiezados"></div>
+      </div>
+      <div class="page" id="page-almacenados">
+        <div class="page-header"><div><div class="page-title">Equipos Almacenados</div><div class="page-subtitle">En uso pero almacenados</div></div><button class="btn btn-primary" id="btn-nuevo-almacenado" onclick="openModalNuevo('almacenado')">+ Nuevo</button></div>
+        <div id="sub-almacenados"></div>
+      </div>
+      <div class="page" id="page-baja">
+        <div class="page-header"><div><div class="page-title">Equipos de Baja</div><div class="page-subtitle">Pendientes de decisión</div></div><button class="btn btn-primary" id="btn-nuevo-baja" onclick="openModalNuevo('baja')">+ Nuevo</button></div>
+        <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-baja-search" placeholder="Marca, modelo, serie..." oninput="renderSub('baja','sub-baja')" style="min-width:200px"></div>
+          <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-baja-marca" onchange="renderSub('baja','sub-baja')"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">ubicación:</span><input type="text" id="filter-baja-ubicacion" placeholder="Ubicación..." oninput="renderSub('baja','sub-baja')" style="min-width:140px"></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('baja')">✕</button>
+        </div>
+        <div id="sub-baja"></div>
+      </div>
+      <div class="page" id="page-enajenar">
+        <div class="page-header"><div><div class="page-title">Para Enajenar</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
+        <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-enaj-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:200px"></div>
+          <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-enaj-marca" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">modelo:</span><select id="filter-enaj-modelo" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todos</option></select></div>
+          <div class="filter-group"><span class="filter-label">ubicación:</span><input type="text" id="filter-enaj-ubicacion" placeholder="Ubicación..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:140px"></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('enajenar')">✕</button>
+        </div>
+        <div id="sub-enajenar"></div>
+      </div>
+      <div class="page" id="page-enajenados">
+        <div class="page-header"><div><div class="page-title">Enajenados</div><div class="page-subtitle">Retirados por gestora de residuos</div></div></div>
+        <div id="sub-enajenados"></div>
+      </div>
+
+      <!-- USUARIOS -->
+      <div class="page" id="page-usuarios">
+        <div class="page-header"><div><div class="page-title">Usuarios</div><div class="page-subtitle">Gestión de accesos</div></div><button class="btn btn-primary" onclick="openModalUsuario()">+ Nuevo usuario</button></div>
+        <div id="lista-usuarios"></div>
+      </div>
+
+      <!-- HISTORIAL -->
+      <div class="page" id="page-historial">
+        <div class="page-header"><div><div class="page-title">Historial</div><div class="page-subtitle">Registro de actividad</div></div></div>
+        <div class="table-wrap" style="padding:0 16px"><div id="lista-historial"></div></div>
+      </div>
+
+    </content-area>
+  </main>
+</div>
+
+<!-- MODAL EQUIPO -->
+<div class="modal-overlay" id="modal-equipo">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="meq-title">Nuevo equipo</div><button class="modal-close" onclick="closeModal('modal-equipo')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="eq-id">
+      <div class="form-row">
+        <div class="form-group"><label>TIPOLOGÍA *</label><input type="text" id="eq-tipo" placeholder="PC, Portátil, Monitor..." list="tipos-list"><datalist id="tipos-list"></datalist></div>
+        <div class="form-group"><label>ESTADO *</label>
+          <select id="eq-estado" onchange="onEstadoChange()">
+            <option value="despiezado">Despiezado</option>
+            <option value="almacenado">Almacenado</option>
+            <option value="baja">Baja</option>
+            <option value="enajenar">Para enajenar</option>
+            <option value="enajenado">Enajenado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>MARCA</label><input type="text" id="eq-marca" placeholder="Dell, HP, Lenovo..." list="marcas-list"><datalist id="marcas-list"></datalist></div>
+        <div class="form-group"><label>MODELO</label><input type="text" id="eq-modelo" placeholder="Modelo del equipo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Nº SERIE</label><input type="text" id="eq-serie" placeholder="Número de serie"></div>
+        <div class="form-group"><label>ETIQUETA INVENTARIO</label><input type="text" id="eq-etiqueta" placeholder="Código interno" oninput="lookupEtiquetaForm(this.value)" autocomplete="off" list="etiquetas-list"><datalist id="etiquetas-list"></datalist></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>UBICACIÓN EN ALMACÉN</label><input type="text" id="eq-ubicacion" placeholder="Estante A3, Caja 12..."></div>
+        <div class="form-group" id="grupo-fecha-enaj" style="display:none"><label>FECHA ENAJENACIÓN</label><input type="date" id="eq-fecha-enaj"></div>
+      </div>
+      <div class="form-row full"><div class="form-group"><label>OBSERVACIONES</label><textarea id="eq-obs" placeholder="Notas adicionales..."></textarea></div></div>
+      <div id="piezas-section" style="display:none">
+        <div class="piezas-section">
+          <div class="piezas-header"><span class="piezas-title">PIEZAS DEL EQUIPO</span><button class="btn btn-secondary btn-sm" onclick="addPiezaEdit()">+ Añadir pieza</button></div>
+          <div style="display:grid;grid-template-columns:2fr 3fr 70px auto;gap:8px;margin-bottom:6px">
+            <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">TIPO</span>
+            <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">DESCRIPCIÓN</span>
+            <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">CANT.</span>
+            <span></span>
+          </div>
+          <div id="piezas-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-equipo')">Cancelar</button><button class="btn btn-primary" onclick="saveEquipo()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="mdet-title">Detalle</div><button class="modal-close" onclick="closeModal('modal-detalle')">×</button></div>
+    <div class="modal-body" id="mdet-body"></div>
+    <div class="modal-footer" id="mdet-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal" style="width:420px">
+    <div class="modal-header"><div class="modal-title" id="musr-title">Nuevo usuario</div><button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="usr-id">
+      <div class="form-row full"><div class="form-group"><label>NOMBRE</label><input type="text" id="usr-nombre" placeholder="Nombre completo"></div></div>
+      <div class="form-row full"><div class="form-group"><label>USUARIO (login)</label><input type="text" id="usr-login" placeholder="nombre_usuario"></div></div>
+      <div class="form-row full"><div class="form-group"><label>CONTRASEÑA</label><input type="text" id="usr-pass" placeholder="contraseña"></div></div>
+      <div class="form-row full"><div class="form-group"><label>ROL</label><select id="usr-rol"><option value="consulta">Consulta (solo lectura)</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button><button class="btn btn-primary" onclick="saveUsuario()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ==================== SUPABASE CONFIG ====================
+const SB_URL = 'https://iwptdvgduhqgbufxqxej.supabase.co';
+const SB_KEY = 'sb_publishable_wxVDDo1o4-6NctOyWIl1Dw_DIDYupp1';
+
+async function sbFetch(path, options={}) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || '',
+      ...(options.headers||{}),
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Supabase error:', err);
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// shorthand helpers
+const sbGet  = (table, qs='')       => sbFetch(table + '?' + qs);
+const sbPost = (table, body)        => sbFetch(table, {method:'POST', prefer:'return=representation', body:JSON.stringify(body)});
+const sbPatch = (table, qs, body)   => sbFetch(table + '?' + qs, {method:'PATCH', prefer:'return=representation', body:JSON.stringify(body)});
+const sbDelete = (table, qs)        => sbFetch(table + '?' + qs, {method:'DELETE'});
+
+// ==================== DATA CACHE ====================
+let db={ equipos:[], piezas:[], usuarios:[], historial:[] };
+let cu=null;
+let hlId=null;
+
+async function loadAll() {
+  showLoading(true);
+  try {
+    const [equipos, piezas, usuarios, historial] = await Promise.all([
+      sbGet('equipos','order=created_at.desc'),
+      sbGet('piezas','order=id.asc'),
+      sbGet('usuarios','order=id.asc'),
+      sbGet('historial','order=fecha.desc&limit=300'),
+    ]);
+    db.equipos   = equipos   || [];
+    db.piezas    = piezas    || [];
+    db.usuarios  = usuarios  || [];
+    db.historial = historial || [];
+  } catch(e) {
+    showNotif('Error conectando con Supabase: ' + e.message, 'error');
+  }
+  showLoading(false);
+}
+
+function showLoading(on) {
+  let el = document.getElementById('loading-bar');
+  if(!el) return;
+  el.style.display = on ? 'block' : 'none';
+}
+
+// ==================== AUTH ====================
+async function doLogin(){
+  const l=g('login-user').value.trim(),p=g('login-pass').value.trim();
+  g('login-error').style.display='none';
+  showLoading(true);
+  try {
+    const rows = await sbGet('usuarios', `login=eq.${encodeURIComponent(l)}&pass=eq.${encodeURIComponent(p)}&limit=1`);
+    if(!rows||!rows.length){g('login-error').style.display='block';showLoading(false);return}
+    const u=rows[0];
+    cu=u;
+    await loadAll();
+    g('login-screen').style.display='none';
+    g('app').style.display='flex';
+    g('header-username').textContent=u.nombre;
+    g('header-role').textContent=u.rol;
+    const ce=u.rol!=='consulta', ia=u.rol==='admin';
+    ['btn-nuevo-equipo','btn-nuevo-despiezado','btn-nuevo-almacenado','btn-nuevo-baja','btn-nuevo-enajenar'].forEach(id=>{const el=g(id);if(el)el.style.display=ce?'':'none'});
+    g('nav-admin-section').style.display=ia?'':'none';
+    refresh();
+  } catch(e) {
+    showLoading(false);
+    showNotif('Error de conexión: '+e.message,'error');
+  }
+}
+function doLogout(){cu=null;g('app').style.display='none';g('login-screen').style.display='flex';g('login-error').style.display='none';g('login-user').value='';g('login-pass').value=''}
+g('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+// ==================== NAV ====================
+const PAGES={
+  equipos:{pg:'page-equipos',nav:'nav-equipos'},
+  despiezados:{pg:'page-despiezados',nav:'nav-despiezados',state:'despiezado',sub:'sub-despiezados'},
+  almacenados:{pg:'page-almacenados',nav:'nav-almacenados',state:'almacenado',sub:'sub-almacenados'},
+  baja:{pg:'page-baja',nav:'nav-baja',state:'baja',sub:'sub-baja'},
+  enajenar:{pg:'page-enajenar',nav:'nav-enajenar',state:'enajenar',sub:'sub-enajenar'},
+  enajenados:{pg:'page-enajenados',nav:'nav-enajenados',state:'enajenado',sub:'sub-enajenados'},
+  usuarios:{pg:'page-usuarios',nav:'nav-usuarios'},
+  historial:{pg:'page-historial',nav:'nav-historial'},
+};
+function showPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const m=PAGES[page];if(!m)return;
+  g(m.pg).classList.add('active');g(m.nav).classList.add('active');
+  if(m.sub)renderSub(m.state,m.sub);
+  if(page==='equipos')renderTable();
+  if(page==='usuarios')renderUsuarios();
+  if(page==='historial')renderHistorial();
+}
+
+// ==================== STATS ====================
+function refresh(){renderTable();updateCounts();}
+function updateCounts(){
+  const n=s=>db.equipos.filter(e=>e.estado===s).length;
+  g('st0').textContent=db.equipos.length;
+  g('st1').textContent=n('despiezado');
+  g('st2').textContent=n('almacenado');
+  g('st3').textContent=n('baja');
+  g('st4').textContent=n('enajenado');
+  g('nca').textContent=db.equipos.length;
+  g('ncd').textContent=n('despiezado');
+  g('ncal').textContent=n('almacenado');
+  g('ncb').textContent=n('baja');
+  g('nce').textContent=n('enajenar');
+  g('ncen').textContent=n('enajenado');
+}
+
+// ==================== LOOKUP ====================
+function lookupEtiqueta(val){
+  const res=g('lookup-result');
+  hlId=null;
+  if(!val.trim()){res.style.display='none';renderTable();return}
+  const q=val.toLowerCase();
+  const matches=db.equipos.filter(e=>e.etiqueta&&e.etiqueta.toLowerCase().includes(q));
+  if(!matches.length){res.textContent='Sin resultados';res.style.display='block';renderTable();return}
+  if(matches.length===1){
+    hlId=matches[0].id;
+    const e=matches[0];
+    res.textContent=`✓ ${[e.tipo,e.marca,e.modelo].filter(Boolean).join(' ')} — ${ELBL_T[e.estado]}`;
+    res.style.display='block';
+  } else {
+    res.textContent=`${matches.length} coincidencias`;
+    res.style.display='block';
+  }
+  renderTable();
+}
+function clearLookup(){g('lookup-input').value='';g('lookup-result').style.display='none';hlId=null;renderTable()}
+
+// ==================== FILTERS ====================
+function populateFilters(){
+  const tipos=[...new Set(db.equipos.map(e=>e.tipo).filter(Boolean))].sort();
+  const marcas=[...new Set(db.equipos.map(e=>e.marca).filter(Boolean))].sort();
+  const modelos=[...new Set(db.equipos.map(e=>e.modelo).filter(Boolean))].sort();
+  const estados=['despiezado','almacenado','baja','enajenar','enajenado'];
+  const fill=(id,arr,lbl)=>{const el=g(id);const cur=el.value;el.innerHTML=`<option value="">${lbl}</option>`+arr.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('')};
+  fill('filter-tipo',tipos,'Todos');fill('filter-marca',marcas,'Todas');fill('filter-modelo',modelos,'Todos');fill('filter-estado',estados,'Todos');
+  g('tipos-list').innerHTML=tipos.map(v=>`<option value="${v}">`).join('');
+  g('marcas-list').innerHTML=marcas.map(v=>`<option value="${v}">`).join('');
+}
+function clearFilters(){['filter-search','filter-tipo','filter-marca','filter-modelo','filter-estado'].forEach(id=>g(id).value='');renderTable()}
+
+function getFiltered(stateOverride){
+  const search=(g('filter-search')?.value||'').toLowerCase();
+  const tipo=g('filter-tipo')?.value||'';
+  const marca=g('filter-marca')?.value||'';
+  const modelo=g('filter-modelo')?.value||'';
+  const estado=stateOverride||(g('filter-estado')?.value||'');
+  const lq=(g('lookup-input')?.value||'').trim().toLowerCase();
+  return db.equipos.filter(e=>{
+    if(estado&&e.estado!==estado)return false;
+    if(tipo&&e.tipo!==tipo)return false;
+    if(marca&&e.marca!==marca)return false;
+    if(modelo&&e.modelo!==modelo)return false;
+    if(lq&&!stateOverride&&!(e.etiqueta&&e.etiqueta.toLowerCase().includes(lq)))return false;
+    if(search){
+      const pztxt=db.piezas.filter(p=>p.equipoId===e.id).map(p=>[p.tipo,p.descripcion].join(' ')).join(' ');
+      if(![e.tipo,e.marca,e.modelo,e.serie,e.etiqueta,e.ubicacion,e.obs,pztxt].join(' ').toLowerCase().includes(search))return false;
+    }
+    return true;
+  });
+}
+
+// ==================== BADGES ====================
+const ELBL={
+  despiezado:'<span class="badge badge-despiezado">🔧 Despiezado</span>',
+  almacenado:'<span class="badge badge-almacenado">📦 Almacenado</span>',
+  baja:'<span class="badge badge-baja">🚫 Baja</span>',
+  enajenar:'<span class="badge badge-enajenar">⏳ Para enajenar</span>',
+  enajenado:'<span class="badge badge-enajenado">✅ Enajenado</span>',
+};
+const ELBL_T={despiezado:'Despiezado',almacenado:'Almacenado',baja:'Baja',enajenar:'Para enajenar',enajenado:'Enajenado'};
+
+// ==================== TABLE ROW ====================
+function eRow(e){
+  const ce=cu&&cu.rol!=='consulta',ia=cu&&cu.rol==='admin';
+  let act=`<button class="btn btn-secondary btn-sm" onclick="verDetalle(${e.id})">Ver</button>`;
+  if(ce){
+    act+=` <button class="btn btn-secondary btn-sm" onclick="editEquipo(${e.id})">Editar</button>`;
+    act+=` <button class="btn btn-secondary btn-sm" onclick="duplicar(${e.id})" title="Duplicar">⧉</button>`;
+    if(e.estado==='baja') act+=` <button class="btn btn-warn btn-sm" onclick="toEnajenar(${e.id})">→ Enajenar</button>`;
+    if(e.estado==='enajenar') act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Enajenado</button>`;
+  }
+  if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
+  const hl=hlId===e.id?' class="hl-row"':'';
+  return `<tr${hl}><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
+}
+
+function renderTable(){
+  populateFilters();
+  const f=getFiltered(null);
+  g('tabla-equipos').innerHTML=f.length?f.map(e=>eRow(e)).join(''):'<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No hay equipos</div></div></td></tr>';
+  updateCounts();
+}
+
+function renderSub(state,divId){
+  // populate sub-filter selects
+  const allOfState=db.equipos.filter(e=>e.estado===state);
+  if(state==='baja'||state==='enajenar'){
+    const pfx=state==='baja'?'baja':'enaj';
+    const marcas=[...new Set(allOfState.map(e=>e.marca).filter(Boolean))].sort();
+    const mSel=g('filter-'+pfx+'-marca');
+    if(mSel){const cur=mSel.value;mSel.innerHTML='<option value="">Todas</option>'+marcas.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+    if(state==='enajenar'){
+      const modelos=[...new Set(allOfState.map(e=>e.modelo).filter(Boolean))].sort();
+      const moSel=g('filter-enaj-modelo');
+      if(moSel){const cur=moSel.value;moSel.innerHTML='<option value="">Todos</option>'+modelos.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+    }
+  }
+  // apply filters
+  let eq=allOfState;
+  if(state==='baja'){
+    const s=(g('filter-baja-search')?.value||'').toLowerCase();
+    const m=g('filter-baja-marca')?.value||'';
+    const u=(g('filter-baja-ubicacion')?.value||'').toLowerCase();
+    eq=eq.filter(e=>{
+      if(m&&e.marca!==m)return false;
+      if(u&&!(e.ubicacion||'').toLowerCase().includes(u))return false;
+      if(s){const h=[e.tipo,e.marca,e.modelo,e.serie,e.etiqueta,e.ubicacion,e.obs].join(' ').toLowerCase();if(!h.includes(s))return false;}
+      return true;
+    });
+  }
+  if(state==='enajenar'){
+    const s=(g('filter-enaj-search')?.value||'').toLowerCase();
+    const m=g('filter-enaj-marca')?.value||'';
+    const mo=g('filter-enaj-modelo')?.value||'';
+    const u=(g('filter-enaj-ubicacion')?.value||'').toLowerCase();
+    eq=eq.filter(e=>{
+      if(m&&e.marca!==m)return false;
+      if(mo&&e.modelo!==mo)return false;
+      if(u&&!(e.ubicacion||'').toLowerCase().includes(u))return false;
+      if(s){const h=[e.tipo,e.marca,e.modelo,e.serie,e.etiqueta,e.ubicacion,e.obs].join(' ').toLowerCase();if(!h.includes(s))return false;}
+      return true;
+    });
+  }
+  if(!eq.length){g(divId).innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No hay equipos</div></div>';return}
+  g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRow(e)).join('')}</tbody></table></div>`;
+}
+
+function clearSubFilter(state){
+  if(state==='baja'){['filter-baja-search','filter-baja-marca','filter-baja-ubicacion'].forEach(id=>{const el=g(id);if(el)el.value=''});renderSub('baja','sub-baja');}
+  if(state==='enajenar'){['filter-enaj-search','filter-enaj-marca','filter-enaj-modelo','filter-enaj-ubicacion'].forEach(id=>{const el=g(id);if(el)el.value=''});renderSub('enajenar','sub-enajenar');}
+}
+
+// ==================== QUICK TRANSITIONS ====================
+async function toEnajenar(id){
+  showLoading(true);
+  try {
+    const e=db.equipos.find(x=>x.id===id);
+    await sbPatch('equipos','id=eq.'+id,{estado:'enajenar'});
+    await logSB(id,'Estado → Para enajenar',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
+    await loadAll(); refresh();
+    renderSub('baja','sub-baja'); renderSub('enajenar','sub-enajenar');
+    showNotif('Equipo movido a "Para enajenar"','success');
+  } catch(e) { showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+async function toEnajenado(id){
+  showLoading(true);
+  try {
+    const e=db.equipos.find(x=>x.id===id);
+    const hoy=new Date().toISOString().split('T')[0];
+    await sbPatch('equipos','id=eq.'+id,{estado:'enajenado',fecha_enaj:hoy});
+    await logSB(id,'Enajenado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
+    await loadAll(); refresh();
+    renderSub('enajenar','sub-enajenar'); renderSub('enajenado','sub-enajenados');
+    showNotif('Enajenado. Fecha registrada: '+hoy,'success');
+  } catch(e) { showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ==================== MODAL EQUIPO ====================
+function openModalNuevo(estado){
+  if(!cu||cu.rol==='consulta')return;
+  g('meq-title').textContent='Nuevo equipo';
+  g('eq-id').value='';
+  ['eq-tipo','eq-marca','eq-modelo','eq-serie','eq-etiqueta','eq-ubicacion','eq-obs'].forEach(id=>g(id).value='');
+  g('eq-estado').value=estado||'despiezado';
+  g('eq-fecha-enaj').value='';
+  g('piezas-list').innerHTML='';
+  onEstadoChange();
+  g('modal-equipo').classList.add('open');
+}
+
+function editEquipo(id){
+  if(!cu||cu.rol==='consulta')return;
+  const e=db.equipos.find(x=>x.id===id);if(!e)return;
+  g('meq-title').textContent='Editar equipo';
+  g('eq-id').value=id;g('eq-tipo').value=e.tipo||'';g('eq-estado').value=e.estado;
+  g('eq-marca').value=e.marca||'';g('eq-modelo').value=e.modelo||'';
+  g('eq-serie').value=e.serie||'';g('eq-etiqueta').value=e.etiqueta||'';
+  g('eq-ubicacion').value=e.ubicacion||'';g('eq-obs').value=e.obs||'';
+  g('eq-fecha-enaj').value=e.fecha_enaj||'';
+  g('piezas-list').innerHTML='';
+  db.piezas.filter(p=>p.equipo_id===id).forEach(p=>addPiezaEdit(p));
+  onEstadoChange();
+  g('modal-equipo').classList.add('open');
+}
+
+function duplicar(id){
+  if(!cu||cu.rol==='consulta')return;
+  const e=db.equipos.find(x=>x.id===id);if(!e)return;
+  g('meq-title').textContent='Nuevo equipo (duplicado de '+( e.etiqueta||'#'+id)+')';
+  g('eq-id').value=''; // nuevo
+  g('eq-tipo').value=e.tipo||'';g('eq-estado').value=e.estado;
+  g('eq-marca').value=e.marca||'';g('eq-modelo').value=e.modelo||'';
+  g('eq-serie').value=''; // serie vacía — equipo distinto
+  g('eq-etiqueta').value=''; // etiqueta vacía
+  g('eq-ubicacion').value=e.ubicacion||'';g('eq-obs').value=e.obs||'';
+  g('eq-fecha-enaj').value='';
+  g('piezas-list').innerHTML='';
+  db.piezas.filter(p=>p.equipo_id===id).forEach(p=>addPiezaEdit({...p,id:null}));
+  onEstadoChange();
+  g('modal-equipo').classList.add('open');
+}
+
+function onEstadoChange(){
+  const s=g('eq-estado').value;
+  g('piezas-section').style.display=s==='despiezado'?'':'none';
+  g('grupo-fecha-enaj').style.display=s==='enajenado'?'':'none';
+}
+
+function addPiezaEdit(data){
+  const d=document.createElement('div');d.className='pieza-edit-row';
+  d.innerHTML=`<input type="text" placeholder="RAM, HDD, CPU..." value="${data?.tipo||''}"><input type="text" placeholder="Descripción" value="${data?.descripcion||''}"><input type="number" placeholder="1" value="${data?.cantidad||1}" min="0"><button class="btn-rm" onclick="this.parentElement.remove()">×</button>`;
+  g('piezas-list').appendChild(d);
+}
+
+async function saveEquipo(){
+  const tipo=g('eq-tipo').value.trim();
+  if(!tipo){showNotif('La tipología es obligatoria','error');return}
+  const id=g('eq-id').value;
+  const estado=g('eq-estado').value;
+  const payload={
+    tipo, estado,
+    marca:g('eq-marca').value.trim()||null,
+    modelo:g('eq-modelo').value.trim()||null,
+    serie:g('eq-serie').value.trim()||null,
+    etiqueta:g('eq-etiqueta').value.trim()||null,
+    ubicacion:g('eq-ubicacion').value.trim()||null,
+    obs:g('eq-obs').value.trim()||null,
+    fecha_enaj:g('eq-fecha-enaj').value||null,
+  };
+  showLoading(true);
+  try {
+    let eqId;
+    if(id){
+      await sbPatch('equipos','id=eq.'+id, payload);
+      eqId=+id;
+      await logSB(eqId,'Editado',`${payload.tipo} ${payload.marca||''} ${payload.modelo||''}`);
+    } else {
+      const rows=await sbPost('equipos', payload);
+      eqId=rows[0].id;
+      await logSB(eqId,'Creado',`${payload.tipo} ${payload.marca||''} ${payload.modelo||''}`);
+    }
+    // piezas: delete old, insert new
+    await sbDelete('piezas','equipo_id=eq.'+eqId);
+    if(estado==='despiezado'){
+      const newPz=[];
+      document.querySelectorAll('#piezas-list .pieza-edit-row').forEach(row=>{
+        const i=row.querySelectorAll('input');
+        if(i[0].value.trim()) newPz.push({equipo_id:eqId,tipo:i[0].value.trim(),descripcion:i[1].value.trim()||null,cantidad:parseInt(i[2].value)||1});
+      });
+      if(newPz.length) await sbPost('piezas', newPz);
+    }
+    await loadAll();
+    closeModal('modal-equipo');refresh();
+    showNotif(id?'Equipo actualizado':'Equipo añadido','success');
+  } catch(e) { showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+async function delEquipo(id){
+  showLoading(true);
+  try {
+    const e=db.equipos.find(x=>x.id===id);
+    await sbDelete('equipos','id=eq.'+id); // cascade deletes piezas
+    await logSB(id,'Eliminado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
+    await loadAll(); refresh();
+    showNotif('Equipo eliminado','success');
+  } catch(e) { showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ==================== DETALLE ====================
+function verDetalle(id){
+  const e=db.equipos.find(x=>x.id===id);if(!e)return;
+  const pz=db.piezas.filter(p=>p.equipo_id===id);
+  const ce=cu&&cu.rol!=='consulta';
+  g('mdet-title').textContent=`${e.tipo||'Equipo'} — ${e.etiqueta||'#'+e.id}`;
+
+  let pzHtml='';
+  if(pz.length){
+    const canUse=ce&&e.estado==='despiezado';
+    pzHtml=`<div class="section-sep">Piezas (${pz.length})</div>
+    <div class="piezas-section">
+      <div style="display:grid;grid-template-columns:2fr 3fr 70px ${canUse?'auto':''};gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">TIPO</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">DESCRIPCIÓN</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">CANT.</span>
+        ${canUse?'<span></span>':''}
+      </div>
+      ${pz.map(p=>{
+        const q=parseInt(p.cantidad)||0;
+        const qc=q===0?'zero':q<=2?'low':'';
+        return `<div class="pieza-view-row">
+          <span>${p.tipo}</span>
+          <span style="color:var(--text2)">${p.descripcion||'—'}</span>
+          <span class="qty ${qc}">${q}</span>
+          ${canUse?`<button class="btn-use" onclick="usarPieza(${p.id},${id})" ${q<=0?'disabled':''}>Despachar</button>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  g('mdet-body').innerHTML=`
+    <div class="detail-grid">
+      <div><div class="detail-label">Estado</div><div class="detail-value">${ELBL[e.estado]}</div></div>
+      <div><div class="detail-label">Tipología</div><div class="detail-value">${e.tipo||'—'}</div></div>
+      <div><div class="detail-label">Marca</div><div class="detail-value">${e.marca||'—'}</div></div>
+      <div><div class="detail-label">Modelo</div><div class="detail-value">${e.modelo||'—'}</div></div>
+      <div><div class="detail-label">Nº Serie</div><div class="detail-value mono">${e.serie||'—'}</div></div>
+      <div><div class="detail-label">Etiqueta inventario</div><div class="detail-value mono">${e.etiqueta||'—'}</div></div>
+      <div><div class="detail-label">Ubicación</div><div class="detail-value">${e.ubicacion||'—'}</div></div>
+      ${e.fecha_enaj?`<div><div class="detail-label">Fecha enajenación</div><div class="detail-value">${e.fecha_enaj}</div></div>`:''}
+    </div>
+    ${e.obs?`<div style="margin-bottom:16px"><div class="detail-label">Observaciones</div><div style="margin-top:4px;color:var(--text2);font-size:13px;line-height:1.6">${e.obs}</div></div>`:''}
+    ${pzHtml}
+    <div style="margin-top:16px;font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">Creado: ${new Date(e.createdAt).toLocaleString('es-ES')}</div>`;
+
+  let ft=`<button class="btn btn-secondary" onclick="closeModal('modal-detalle')">Cerrar</button>`;
+  if(ce){
+    ft+=` <button class="btn btn-secondary" onclick="closeModal('modal-detalle');duplicar(${id})" title="Duplicar para otro departamento">⧉ Duplicar</button>`;
+    ft+=` <button class="btn btn-primary" onclick="closeModal('modal-detalle');editEquipo(${id})">Editar</button>`;
+    if(e.estado==='baja') ft+=` <button class="btn btn-warn" onclick="closeModal('modal-detalle');toEnajenar(${id})">→ Para enajenar</button>`;
+    if(e.estado==='enajenar') ft+=` <button class="btn btn-success" onclick="closeModal('modal-detalle');toEnajenado(${id})">→ Enajenado</button>`;
+  }
+  g('mdet-footer').innerHTML=ft;
+  g('modal-detalle').classList.add('open');
+}
+
+async function usarPieza(pzId,eqId){
+  const p=db.piezas.find(x=>x.id===pzId);if(!p||p.cantidad<=0)return;
+  const newQty=parseInt(p.cantidad)-1;
+  showLoading(true);
+  try {
+    await sbPatch('piezas','id=eq.'+pzId,{cantidad:newQty});
+    const e=db.equipos.find(x=>x.id===eqId);
+    await logSB(eqId,'Pieza despachada',`${p.tipo} de ${e?.tipo||''} ${e?.marca||''} — quedan ${newQty}`);
+    await loadAll();
+    verDetalle(eqId);
+    showNotif(`"${p.tipo}" despachada. Quedan: ${newQty}`,'success');
+  } catch(e) { showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ==================== USUARIOS ====================
+function renderUsuarios(){
+  const el=g('lista-usuarios');
+  if(!db.usuarios.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-text">No hay usuarios</div></div>';return}
+  const RC={admin:'var(--accent)',editor:'var(--blue)',consulta:'var(--green)'};
+  el.innerHTML=db.usuarios.map(u=>`
+    <div class="user-card">
+      <div class="user-card-info">
+        <div class="user-avatar">${u.nombre[0].toUpperCase()}</div>
+        <div><div style="font-weight:500">${u.nombre}</div><div class="mono" style="font-size:12px;color:var(--text2)">${u.login}</div></div>
+        <span class="badge" style="background:rgba(255,255,255,.05);color:${RC[u.rol]};border-color:${RC[u.rol]}33;margin-left:8px">${u.rol}</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="editUsuario(${u.id})">Editar</button>
+        ${u.id!==cu.id?`<button class="btn btn-danger btn-sm" onclick="delUsuario(${u.id})">Eliminar</button>`:''}
+      </div>
+    </div>`).join('');
+}
+function openModalUsuario(){
+  g('musr-title').textContent='Nuevo usuario';
+  ['usr-id','usr-nombre','usr-login','usr-pass'].forEach(id=>g(id).value='');
+  g('usr-rol').value='consulta';g('modal-usuario').classList.add('open');
+}
+function editUsuario(id){
+  const u=db.usuarios.find(x=>x.id===id);if(!u)return;
+  g('musr-title').textContent='Editar usuario';g('usr-id').value=id;
+  g('usr-nombre').value=u.nombre;g('usr-login').value=u.login;g('usr-pass').value=u.pass;g('usr-rol').value=u.rol;
+  g('modal-usuario').classList.add('open');
+}
+async function saveUsuario(){
+  const n=g('usr-nombre').value.trim(),l=g('usr-login').value.trim(),p=g('usr-pass').value.trim();
+  if(!n||!l||!p){showNotif('Todos los campos son obligatorios','error');return}
+  const id=g('usr-id').value;
+  const payload={nombre:n,login:l,pass:p,rol:g('usr-rol').value};
+  showLoading(true);
+  try {
+    if(id) await sbPatch('usuarios','id=eq.'+id,payload);
+    else await sbPost('usuarios',payload);
+    await loadAll(); closeModal('modal-usuario'); renderUsuarios();
+    showNotif(id?'Usuario actualizado':'Usuario creado','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+async function delUsuario(id){
+  showLoading(true);
+  try {
+    await sbDelete('usuarios','id=eq.'+id);
+    await loadAll(); renderUsuarios();
+    showNotif('Usuario eliminado','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ==================== HISTORIAL ====================
+function log(eqId,accion,detalle){ logSB(eqId,accion,detalle); } // kept for compat
+async function logSB(eqId,accion,detalle){
+  try {
+    await sbPost('historial',{equipo_id:eqId||null,accion,detalle,usuario:cu?.nombre||'?'});
+  } catch(e){ console.warn('historial error:',e); }
+}
+function renderHistorial(){
+  const el=g('lista-historial');
+  if(!db.historial.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Sin actividad</div></div>';return}
+  el.innerHTML=db.historial.map(h=>`<div class="hist-item"><div class="hist-time">${new Date(h.fecha).toLocaleString('es-ES')}</div><div><div style="font-weight:500">${h.accion}: <span style="color:var(--text2)">${h.detalle}</span></div><div class="hist-user">— ${h.usuario}</div></div></div>`).join('');
+}
+
+// ==================== UTILS ====================
+function g(id){return document.getElementById(id)}
+function closeModal(id){g(id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+function showNotif(msg,type='success'){const n=g('notif');n.textContent=msg;n.className=`notif ${type} show`;setTimeout(()=>n.classList.remove('show'),3200)}
+
+
+function lookupEtiquetaForm(val){
+  // populate datalist
+  const dl=g('etiquetas-list');
+  if(dl){
+    const matches=db.equipos.filter(e=>e.etiqueta&&e.etiqueta.toLowerCase().includes(val.toLowerCase()));
+    dl.innerHTML=matches.map(e=>`<option value="${e.etiqueta}">${e.tipo||''} ${e.marca||''} ${e.modelo||''}</option>`).join('');
+  }
+  if(!val.trim())return;
+  // exact or single match → autofill
+  const exact=db.equipos.find(e=>e.etiqueta&&e.etiqueta.toLowerCase()===val.toLowerCase());
+  const partial=db.equipos.filter(e=>e.etiqueta&&e.etiqueta.toLowerCase().includes(val.toLowerCase()));
+  const src=exact||(partial.length===1?partial[0]:null);
+  if(src){
+    if(src.tipo)g('eq-tipo').value=src.tipo;
+    if(src.marca)g('eq-marca').value=src.marca;
+    if(src.modelo)g('eq-modelo').value=src.modelo;
+    if(src.serie)g('eq-serie').value=src.serie;
+    if(src.ubicacion)g('eq-ubicacion').value=src.ubicacion;
+    if(src.obs)g('eq-obs').value=src.obs;
+    g('eq-estado').value=src.estado;
+    onEstadoChange();
+    // load piezas if despiezado
+    if(src.estado==='despiezado'){
+      g('piezas-list').innerHTML='';
+      db.piezas.filter(p=>p.equipoId===src.id).forEach(p=>addPiezaEdit(p));
+    }
+    showNotif('Datos cargados desde inventario: '+src.etiqueta,'success');
+  }
+}
+// ==================== INIT ====================
+// DB loaded after login via loadAll()
+</script>
+</body>
+</html>
