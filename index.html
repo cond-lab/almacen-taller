@@ -211,6 +211,12 @@
       <!-- SUB PÁGINAS -->
       <div class="page" id="page-despiezados">
         <div class="page-header"><div><div class="page-title">Equipos Despiezados</div><div class="page-subtitle">Desmontados y con piezas inventariadas</div></div><button class="btn btn-primary" id="btn-nuevo-despiezado" onclick="openModalNuevo('despiezado')">+ Nuevo</button></div>
+        <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-desp-search" placeholder="Marca, modelo, serie, piezas..." oninput="renderSub('despiezado','sub-despiezados')" style="min-width:240px"></div>
+          <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-desp-marca" onchange="renderSub('despiezado','sub-despiezados')"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">modelo:</span><select id="filter-desp-modelo" onchange="renderSub('despiezado','sub-despiezados')"><option value="">Todos</option></select></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('despiezado')">✕</button>
+        </div>
         <div id="sub-despiezados"></div>
       </div>
       <div class="page" id="page-almacenados">
@@ -278,11 +284,11 @@
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>MARCA</label><input type="text" id="eq-marca" placeholder="Dell, HP, Lenovo..." list="marcas-list"><datalist id="marcas-list"></datalist></div>
-        <div class="form-group"><label>MODELO</label><input type="text" id="eq-modelo" placeholder="Modelo del equipo"></div>
+        <div class="form-group"><label>MARCA</label><input type="text" id="eq-marca" placeholder="Dell, HP, Lenovo..." list="marcas-list" oninput="lookupEtiquetaForm(this.value)"><datalist id="marcas-list"></datalist></div>
+        <div class="form-group"><label>MODELO</label><input type="text" id="eq-modelo" placeholder="Modelo del equipo" oninput="lookupEtiquetaForm(this.value)"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Nº SERIE</label><input type="text" id="eq-serie" placeholder="Número de serie"></div>
+        <div class="form-group"><label>Nº SERIE</label><input type="text" id="eq-serie" placeholder="Número de serie" oninput="lookupEtiquetaForm(this.value)" list="series-list"><datalist id="series-list"></datalist></div>
         <div class="form-group"><label>ETIQUETA INVENTARIO</label><input type="text" id="eq-etiqueta" placeholder="Código interno" oninput="lookupEtiquetaForm(this.value)" autocomplete="off" list="etiquetas-list"><datalist id="etiquetas-list"></datalist></div>
       </div>
       <div class="form-row">
@@ -550,6 +556,14 @@ function renderTable(){
 function renderSub(state,divId){
   // populate sub-filter selects
   const allOfState=db.equipos.filter(e=>e.estado===state);
+  if(state==='despiezado'){
+    const marcas=[...new Set(allOfState.map(e=>e.marca).filter(Boolean))].sort();
+    const modelos=[...new Set(allOfState.map(e=>e.modelo).filter(Boolean))].sort();
+    const mSel=g('filter-desp-marca');
+    if(mSel){const cur=mSel.value;mSel.innerHTML='<option value="">Todas</option>'+marcas.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+    const moSel=g('filter-desp-modelo');
+    if(moSel){const cur=moSel.value;moSel.innerHTML='<option value="">Todos</option>'+modelos.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+  }
   if(state==='baja'||state==='enajenar'){
     const pfx=state==='baja'?'baja':'enaj';
     const marcas=[...new Set(allOfState.map(e=>e.marca).filter(Boolean))].sort();
@@ -563,6 +577,21 @@ function renderSub(state,divId){
   }
   // apply filters
   let eq=allOfState;
+  if(state==='despiezado'){
+    const s=(g('filter-desp-search')?.value||'').toLowerCase();
+    const m=g('filter-desp-marca')?.value||'';
+    const mo=g('filter-desp-modelo')?.value||'';
+    eq=eq.filter(e=>{
+      if(m&&e.marca!==m)return false;
+      if(mo&&e.modelo!==mo)return false;
+      if(s){
+        const pztxt=db.piezas.filter(p=>p.equipo_id===e.id).map(p=>[p.tipo,p.descripcion].join(' ')).join(' ');
+        const h=[e.tipo,e.marca,e.modelo,e.serie,e.etiqueta,e.ubicacion,e.obs,pztxt].join(' ').toLowerCase();
+        if(!h.includes(s))return false;
+      }
+      return true;
+    });
+  }
   if(state==='baja'){
     const s=(g('filter-baja-search')?.value||'').toLowerCase();
     const m=g('filter-baja-marca')?.value||'';
@@ -592,6 +621,7 @@ function renderSub(state,divId){
 }
 
 function clearSubFilter(state){
+  if(state==='despiezado'){['filter-desp-search','filter-desp-marca','filter-desp-modelo'].forEach(id=>{const el=g(id);if(el)el.value=''});renderSub('despiezado','sub-despiezados');}
   if(state==='baja'){['filter-baja-search','filter-baja-marca','filter-baja-ubicacion'].forEach(id=>{const el=g(id);if(el)el.value=''});renderSub('baja','sub-baja');}
   if(state==='enajenar'){['filter-enaj-search','filter-enaj-marca','filter-enaj-modelo','filter-enaj-ubicacion'].forEach(id=>{const el=g(id);if(el)el.value=''});renderSub('enajenar','sub-enajenar');}
 }
@@ -653,17 +683,20 @@ function editEquipo(id){
 
 function duplicar(id){
   if(!cu||cu.rol==='consulta')return;
-  const e=db.equipos.find(x=>x.id===id);if(!e)return;
-  g('meq-title').textContent='Nuevo equipo (duplicado de '+( e.etiqueta||'#'+id)+')';
-  g('eq-id').value=''; // nuevo
+  // Work from a snapshot so edits in the form never touch the original
+  const src=db.equipos.find(x=>x.id===id);if(!src)return;
+  const e=JSON.parse(JSON.stringify(src)); // deep copy
+  g('meq-title').textContent='Nuevo equipo (duplicado de '+(e.etiqueta||'#'+id)+')';
+  g('eq-id').value=''; // no id → will create new record
   g('eq-tipo').value=e.tipo||'';g('eq-estado').value=e.estado;
   g('eq-marca').value=e.marca||'';g('eq-modelo').value=e.modelo||'';
-  g('eq-serie').value=''; // serie vacía — equipo distinto
+  g('eq-serie').value='';   // serie vacía — equipo distinto
   g('eq-etiqueta').value=''; // etiqueta vacía
   g('eq-ubicacion').value=e.ubicacion||'';g('eq-obs').value=e.obs||'';
   g('eq-fecha-enaj').value='';
   g('piezas-list').innerHTML='';
-  db.piezas.filter(p=>p.equipo_id===id).forEach(p=>addPiezaEdit({...p,id:null}));
+  // copy piezas as new (no id, so they'll be inserted fresh)
+  db.piezas.filter(p=>p.equipo_id===id).forEach(p=>addPiezaEdit({...p,id:undefined,equipo_id:undefined}));
   onEstadoChange();
   g('modal-equipo').classList.add('open');
 }
@@ -885,21 +918,30 @@ async function lookupEtiquetaForm(val){
   const dl=g('etiquetas-list');
   if(!val.trim()){if(dl)dl.innerHTML='';return;}
   try {
-    // Search in inventario table
+    // Search by codigo OR serie OR marca OR modelo (OR filter with Supabase)
+    const v=encodeURIComponent(val);
     const rows = await sbGet('inventario',
-      `codigo=ilike.*${encodeURIComponent(val)}*&limit=10&order=codigo.asc`
+      `or=(codigo.ilike.*${v}*,serie.ilike.*${v}*,marca.ilike.*${v}*,modelo.ilike.*${v}*)&limit=12&order=codigo.asc`
     );
     // populate datalist suggestions
     if(dl && rows){
-      dl.innerHTML=rows.map(r=>`<option value="${r.codigo}">${r.tipo||''} ${r.marca||''} ${r.modelo||''}</option>`).join('');
+      // update all datalists
+      dl.innerHTML=rows.map(r=>`<option value="${r.codigo}">${r.tipo||''} ${r.marca||''} ${r.modelo||''} — ${r.serie||''}</option>`).join('');
+      const sdl=g('series-list');
+      if(sdl)sdl.innerHTML=rows.map(r=>`<option value="${r.serie||''}">${r.tipo||''} ${r.marca||''} ${r.modelo||''}</option>`).join('');
     }
-    // autofill if exact match or single result
-    const src = rows && (rows.find(r=>r.codigo.toLowerCase()===val.toLowerCase()) || (rows.length===1?rows[0]:null));
+    // autofill if exact match on codigo or serie, or single result
+    const src = rows && (
+      rows.find(r=>r.codigo&&r.codigo.toLowerCase()===val.toLowerCase()) ||
+      rows.find(r=>r.serie&&r.serie.toLowerCase()===val.toLowerCase()) ||
+      (rows.length===1?rows[0]:null)
+    );
     if(src){
       if(src.tipo)  g('eq-tipo').value=src.tipo;
       if(src.marca) g('eq-marca').value=src.marca;
       if(src.modelo)g('eq-modelo').value=src.modelo;
       if(src.serie) g('eq-serie').value=src.serie;
+      g('eq-etiqueta').value=src.codigo||'';
       showNotif('Datos cargados: '+src.codigo,'success');
     }
   } catch(e){ console.warn('lookup error:',e); }
