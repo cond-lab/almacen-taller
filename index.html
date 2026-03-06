@@ -282,8 +282,18 @@
 
       <!-- HISTORIAL -->
       <div class="page" id="page-historial">
-        <div class="page-header"><div><div class="page-title">Historial</div><div class="page-subtitle">Registro de actividad</div></div></div>
-        <div class="table-wrap" style="padding:0 16px"><div id="lista-historial"></div></div>
+        <div class="page-header"><div><div class="page-title">Historial</div><div class="page-subtitle">Registro completo de actividad</div></div></div>
+        <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-hist-search" placeholder="Equipo, detalle..." oninput="renderHistorial()" style="min-width:200px"></div>
+          <div class="filter-group"><span class="filter-label">usuario:</span><select id="filter-hist-usuario" onchange="renderHistorial()"><option value="">Todos</option></select></div>
+          <div class="filter-group"><span class="filter-label">acción:</span><select id="filter-hist-accion" onchange="renderHistorial()"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">módulo:</span><select id="filter-hist-modulo" onchange="renderHistorial()"><option value="">Todos</option><option value="equipos">Equipos</option><option value="reparacion">Reparación</option><option value="usuarios">Usuarios</option></select></div>
+          <div class="filter-group"><span class="filter-label">desde:</span><input type="date" id="filter-hist-desde" onchange="renderHistorial()"></div>
+          <div class="filter-group"><span class="filter-label">hasta:</span><input type="date" id="filter-hist-hasta" onchange="renderHistorial()"></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearHistFilters()">✕</button>
+          <span id="hist-count" style="color:var(--text2);font-size:12px;margin-left:8px"></span>
+        </div>
+        <div class="table-wrap"><div id="lista-historial"></div></div>
       </div>
 
     </content-area>
@@ -456,7 +466,7 @@ async function loadAll() {
       sbGet('equipos','order=created_at.desc'),
       sbGet('piezas','order=id.asc'),
       sbGet('usuarios','order=id.asc'),
-      sbGet('historial','order=fecha.desc&limit=300'),
+      sbGet('historial','order=fecha.desc&limit=1000'),
       sbGet('reparaciones','order=created_at.desc'),
     ]);
     db.equipos      = equipos      || [];
@@ -493,8 +503,8 @@ async function doLogin(){
     g('header-role').textContent=u.rol;
     const ce=u.rol!=='consulta', ia=u.rol==='admin';
     ['btn-nuevo-equipo','btn-nuevo-despiezado','btn-nuevo-almacenado','btn-nuevo-baja','btn-nuevo-enajenar'].forEach(id=>{const el=g(id);if(el)el.style.display=ce?'':'none'});
-  // btn-nuevo-reparacion visible for all logged users
-  const brep=g('btn-nuevo-reparacion');if(brep)brep.style.display='';
+    // btn-nuevo-reparacion visible para todos (consulta tb puede crear)
+    const brep=g('btn-nuevo-reparacion');if(brep)brep.style.display='';
     g('nav-admin-section').style.display=ia?'':'none';
     refresh();
   } catch(e) {
@@ -981,15 +991,65 @@ async function delUsuario(id){
 
 // ==================== HISTORIAL ====================
 function log(eqId,accion,detalle){ logSB(eqId,accion,detalle); } // kept for compat
-async function logSB(eqId,accion,detalle){
+async function logSB(eqId,accion,detalle,modulo='equipos'){
   try {
-    await sbPost('historial',{equipo_id:eqId||null,accion,detalle,usuario:cu?.nombre||'?'});
+    await sbPost('historial',{equipo_id:eqId||null,accion,detalle,usuario:cu?.nombre||'?',modulo});
   } catch(e){ console.warn('historial error:',e); }
 }
 function renderHistorial(){
   const el=g('lista-historial');
-  if(!db.historial.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Sin actividad</div></div>';return}
-  el.innerHTML=db.historial.map(h=>`<div class="hist-item"><div class="hist-time">${new Date(h.fecha).toLocaleString('es-ES')}</div><div><div style="font-weight:500">${h.accion}: <span style="color:var(--text2)">${h.detalle}</span></div><div class="hist-user">— ${h.usuario}</div></div></div>`).join('');
+  // populate filter selects
+  const usuarios=[...new Set(db.historial.map(h=>h.usuario).filter(Boolean))].sort();
+  const uSel=g('filter-hist-usuario');
+  if(uSel){const cur=uSel.value;uSel.innerHTML='<option value="">Todos</option>'+usuarios.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+  const acciones=[...new Set(db.historial.map(h=>h.accion).filter(Boolean))].sort();
+  const aSel=g('filter-hist-accion');
+  if(aSel){const cur=aSel.value;aSel.innerHTML='<option value="">Todas</option>'+acciones.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+  // apply filters
+  const s=(g('filter-hist-search')?.value||'').toLowerCase();
+  const fu=g('filter-hist-usuario')?.value||'';
+  const fa=g('filter-hist-accion')?.value||'';
+  const fm=g('filter-hist-modulo')?.value||'';
+  const fd=g('filter-hist-desde')?.value||'';
+  const fh=g('filter-hist-hasta')?.value||'';
+  let rows=db.historial.filter(h=>{
+    if(fu&&h.usuario!==fu)return false;
+    if(fa&&h.accion!==fa)return false;
+    if(fm&&h.modulo!==fm)return false;
+    if(fd&&h.fecha<fd)return false;
+    if(fh&&h.fecha>fh+'T23:59:59')return false;
+    if(s){const txt=[h.accion,h.detalle,h.usuario,h.modulo].join(' ').toLowerCase();if(!txt.includes(s))return false;}
+    return true;
+  });
+  const cnt=g('hist-count');if(cnt)cnt.textContent=rows.length+' registros';
+  if(!rows.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Sin resultados</div></div>';return}
+  const MODULO_BADGE={
+    equipos:'<span style="background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3);padding:2px 7px;border-radius:3px;font-size:11px">equipos</span>',
+    reparacion:'<span style="background:rgba(236,72,153,.15);color:#ec4899;border:1px solid rgba(236,72,153,.3);padding:2px 7px;border-radius:3px;font-size:11px">reparación</span>',
+    usuarios:'<span style="background:rgba(240,165,0,.15);color:var(--accent);border:1px solid rgba(240,165,0,.3);padding:2px 7px;border-radius:3px;font-size:11px">usuarios</span>',
+  };
+  el.innerHTML=`<table style="width:100%"><thead><tr>
+    <th style="width:140px">Fecha/Hora</th>
+    <th style="width:100px">Usuario</th>
+    <th style="width:90px">Módulo</th>
+    <th style="width:140px">Acción</th>
+    <th>Detalle</th>
+  </tr></thead><tbody>`+rows.map(h=>{
+    const fecha=new Date(h.fecha).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const mod=MODULO_BADGE[h.modulo]||(h.modulo?`<span style="padding:2px 7px;border-radius:3px;font-size:11px;background:var(--surface2)">${h.modulo}</span>`:'—');
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td class="mono" style="font-size:12px;color:var(--text2);padding:8px 6px;white-space:nowrap">${fecha}</td>
+      <td style="padding:8px 6px;font-size:13px">${h.usuario||'—'}</td>
+      <td style="padding:8px 6px">${mod}</td>
+      <td style="padding:8px 6px;font-weight:500;font-size:13px">${h.accion||'—'}</td>
+      <td style="padding:8px 6px;color:var(--text2);font-size:13px">${h.detalle||'—'}</td>
+    </tr>`;
+  }).join('')+'</tbody></table>';
+}
+
+function clearHistFilters(){
+  ['filter-hist-search','filter-hist-usuario','filter-hist-accion','filter-hist-modulo','filter-hist-desde','filter-hist-hasta'].forEach(id=>{const el=g(id);if(el)el.value=''});
+  renderHistorial();
 }
 
 // ==================== UTILS ====================
@@ -1112,12 +1172,13 @@ function renderReparacion(){
     if(s){const h=[r.ot,r.tipo,r.marca,r.modelo,r.serie,r.etiqueta,r.ubicacion,r.obs].join(' ').toLowerCase();if(!h.includes(s))return false;}
     return true;
   });
-  const ia=cu&&cu.rol==='admin';
+  const ce_rep=cu&&cu.rol!=='consulta',ia=cu&&cu.rol==='admin';
   const EST_REP={pendiente:'<span class="badge" style="background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3)">⏳ Pendiente</span>',en_curso:'<span class="badge" style="background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)">🔧 En curso</span>',terminado:'<span class="badge" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)">✅ Terminado</span>'};
   if(!eq.length){g('sub-reparacion').innerHTML='<div class="empty-state"><div class="empty-icon">🔨</div><div class="empty-text">No hay equipos en reparación</div></div>';updateCounts();return;}
   const rows=eq.map(r=>{
-    let act=`<button class="btn btn-secondary btn-sm" onclick="openModalReparacion(${r.id})">Editar</button>`;
-    if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delReparacion(${r.id})">✕ Taller</button>`;
+    let act=`<button class="btn btn-secondary btn-sm" onclick="verReparacion(${r.id})">Ver</button>`;
+    if(ce_rep) act+=` <button class="btn btn-secondary btn-sm" onclick="openModalReparacion(${r.id})">Editar</button>`;
+    if(ce_rep) act+=` <button class="btn btn-danger btn-sm" onclick="delReparacion(${r.id})">✕ Eliminar</button>`;
     return `<tr>
       <td class="mono">${r.etiqueta||'—'}</td>
       <td class="mono">${r.ot||'—'}</td>
@@ -1183,8 +1244,8 @@ async function saveReparacion(){
   };
   showLoading(true);
   try {
-    if(id) await sbPatch('reparaciones','id=eq.'+id,payload);
-    else await sbPost('reparaciones',payload);
+    if(id){ await sbPatch('reparaciones','id=eq.'+id,payload); await logSB(null,id?'OT editada':'OT creada',`${payload.tipo} ${payload.marca||''} ${payload.ot||''}`.trim(),'reparacion'); }
+    else { const r=await sbPost('reparaciones',payload); await logSB(null,'OT creada',`${payload.tipo} ${payload.marca||''} ${payload.ot||''}`.trim(),'reparacion'); }
     await loadAll();closeModal('modal-reparacion');renderReparacion();
     showNotif(id?'OT actualizada':'OT creada','success');
   } catch(e){ showNotif('Error: '+e.message,'error'); }
@@ -1224,6 +1285,29 @@ async function lookupReparacion(val){
       showNotif('Datos cargados: '+src.codigo,'success');
     }
   } catch(e){ console.warn('lookup rep error:',e); }
+}
+
+
+function verReparacion(id){
+  const r=db.reparaciones.find(x=>x.id===id);if(!r)return;
+  const EST_REP={pendiente:'⏳ Pendiente',en_curso:'🔧 En curso',terminado:'✅ Terminado'};
+  const html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;padding:4px 0">
+    <div><div class="detail-label">ETIQUETA</div><div class="detail-value mono">${r.etiqueta||'—'}</div></div>
+    <div><div class="detail-label">OT</div><div class="detail-value mono">${r.ot||'—'}</div></div>
+    <div><div class="detail-label">TIPOLOGÍA</div><div class="detail-value">${r.tipo||'—'}</div></div>
+    <div><div class="detail-label">ESTADO</div><div class="detail-value">${EST_REP[r.estado_rep]||r.estado_rep||'—'}</div></div>
+    <div><div class="detail-label">MARCA</div><div class="detail-value">${r.marca||'—'}</div></div>
+    <div><div class="detail-label">MODELO</div><div class="detail-value">${r.modelo||'—'}</div></div>
+    <div><div class="detail-label">Nº SERIE</div><div class="detail-value mono">${r.serie||'—'}</div></div>
+    <div><div class="detail-label">UBICACIÓN</div><div class="detail-value">${r.ubicacion||'—'}</div></div>
+    <div><div class="detail-label">FECHA OT</div><div class="detail-value">${r.fecha_ot||'—'}</div></div>
+    <div><div class="detail-label">FECHA TRASLADO</div><div class="detail-value">${r.fecha_traslado||'—'}</div></div>
+    ${r.obs?`<div style="grid-column:1/-1"><div class="detail-label">OBSERVACIONES</div><div class="detail-value">${r.obs}</div></div>`:''}
+  </div>`;
+  g('detalle-content').innerHTML=html;
+  g('detalle-title').textContent='OT — '+(r.ot||r.tipo||'Reparación');
+  g('detalle-footer').innerHTML='<button class="btn btn-secondary" onclick="closeModal(\'modal-detalle\')">Cerrar</button>';
+  g('modal-detalle').classList.add('open');
 }
 
 // ==================== INIT ====================
