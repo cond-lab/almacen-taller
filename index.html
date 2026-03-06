@@ -151,7 +151,7 @@
     <div class="form-group"><label>Contraseña</label><input type="text" id="login-pass" placeholder="contraseña"></div>
     <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
     <button class="btn btn-primary" onclick="doLogin()">ENTRAR</button>
-    <div style="margin-top:16px;font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">Demo: admin/admin · editor/editor · consulta/consulta</div>
+
   </div>
 </div>
 
@@ -259,13 +259,13 @@
       <div class="page" id="page-enajenar">
         <div class="page-header"><div><div class="page-title">Retirado</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
         <div class="filters-bar" style="margin-bottom:16px">
-          <div class="filter-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chk-all-retirado" onchange="toggleAllRetirado(this.checked)"><span class="filter-label">todos</span></label></div>
+          <div class="filter-group" id="grp-chk-all-retirado"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chk-all-retirado" onchange="toggleAllRetirado(this.checked)"><span class="filter-label">todos</span></label></div>
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-enaj-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:200px"></div>
           <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-enaj-marca" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todas</option></select></div>
           <div class="filter-group"><span class="filter-label">modelo:</span><select id="filter-enaj-modelo" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todos</option></select></div>
           <div class="filter-group"><span class="filter-label">ubicación:</span><input type="text" id="filter-enaj-ubicacion" placeholder="Ubicación..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:140px"></div>
           <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('enajenar')">✕</button>
-          <button class="btn btn-destruir-masivo btn-sm" onclick="destruirMasivo()">♻️ Destruir seleccionados</button>
+          <button class="btn btn-destruir-masivo btn-sm" id="btn-destruir-masivo" onclick="destruirMasivo()">♻️ Destruir seleccionados</button>
         </div>
         <div id="sub-enajenar"></div>
       </div>
@@ -505,6 +505,9 @@ async function doLogin(){
     ['btn-nuevo-equipo','btn-nuevo-despiezado','btn-nuevo-almacenado','btn-nuevo-baja','btn-nuevo-enajenar'].forEach(id=>{const el=g(id);if(el)el.style.display=ce?'':'none'});
     // btn-nuevo-reparacion visible para todos (consulta tb puede crear)
     const brep=g('btn-nuevo-reparacion');if(brep)brep.style.display='';
+    // checkboxes destruccion masiva solo editor/admin
+    const bkd=g('btn-destruir-masivo');if(bkd)bkd.style.display=ce?'':'none';
+    const gkd=g('grp-chk-all-retirado');if(gkd)gkd.style.display=ce?'':'none';
     g('nav-admin-section').style.display=ia?'':'none';
     refresh();
   } catch(e) {
@@ -727,7 +730,7 @@ async function toEnajenar(id){
   try {
     const e=db.equipos.find(x=>x.id===id);
     await sbPatch('equipos','id=eq.'+id,{estado:'enajenar'});
-    await logSB(id,'Estado → Retirado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
+    await logSB(id,'Estado → Retirado',`${eqDesc(e)} || Estado anterior: ${e?.estado||'—'} → Retirado`);
     await loadAll(); refresh();
     renderSub('baja','sub-baja'); renderSub('enajenar','sub-enajenar');
     showNotif('Equipo marcado como Retirado','success');
@@ -740,7 +743,7 @@ async function toEnajenado(id){
     const e=db.equipos.find(x=>x.id===id);
     const hoy=new Date().toISOString().split('T')[0];
     await sbPatch('equipos','id=eq.'+id,{estado:'enajenado',fecha_enaj:hoy});
-    await logSB(id,'Destruido',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
+    await logSB(id,'Destruido',`${eqDesc(e)} || Estado anterior: ${e?.estado||'—'} → Destruido | Fecha: ${hoy}`);
     await loadAll(); refresh();
     renderSub('enajenar','sub-enajenar'); renderSub('enajenado','sub-enajenados');
     showNotif('Destruido. Fecha registrada: '+hoy,'success');
@@ -827,13 +830,15 @@ async function saveEquipo(){
   try {
     let eqId;
     if(id){
+      const oldE=db.equipos.find(x=>x.id===+id)||{};
       await sbPatch('equipos','id=eq.'+id, payload);
       eqId=+id;
-      await logSB(eqId,'Editado',`${payload.tipo} ${payload.marca||''} ${payload.modelo||''}`);
+      const diff=eqDiff(oldE,payload);
+      await logSB(eqId,'Editado',`${eqDesc(payload)} || Cambios: ${diff}`);
     } else {
       const rows=await sbPost('equipos', payload);
       eqId=rows[0].id;
-      await logSB(eqId,'Creado',`${payload.tipo} ${payload.marca||''} ${payload.modelo||''}`);
+      await logSB(eqId,'Creado',eqDesc(payload));
     }
     // piezas: delete old, insert new
     await sbDelete('piezas','equipo_id=eq.'+eqId);
@@ -857,7 +862,7 @@ async function delEquipo(id){
   try {
     const e=db.equipos.find(x=>x.id===id);
     await sbDelete('equipos','id=eq.'+id); // cascade deletes piezas
-    await logSB(id,'Eliminado',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''}`);
+    await logSB(id,'Eliminado',eqDesc(e));
     await loadAll(); refresh();
     showNotif('Equipo eliminado','success');
   } catch(e) { showNotif('Error: '+e.message,'error'); }
@@ -928,7 +933,7 @@ async function usarPieza(pzId,eqId){
   try {
     await sbPatch('piezas','id=eq.'+pzId,{cantidad:newQty});
     const e=db.equipos.find(x=>x.id===eqId);
-    await logSB(eqId,'Pieza despachada',`${p.tipo} de ${e?.tipo||''} ${e?.marca||''} — quedan ${newQty}`);
+    await logSB(eqId,'Pieza despachada',`${eqDesc(e)} || Pieza: ${p.tipo}${p.descripcion?' ('+p.descripcion+')':''} | Cantidad anterior: ${p.cantidad} → ${newQty}`);
     await loadAll();
     verDetalle(eqId);
     showNotif(`"${p.tipo}" despachada. Quedan: ${newQty}`,'success');
@@ -972,8 +977,13 @@ async function saveUsuario(){
   const payload={nombre:n,login:l,pass:p,rol:g('usr-rol').value};
   showLoading(true);
   try {
-    if(id) await sbPatch('usuarios','id=eq.'+id,payload);
-    else await sbPost('usuarios',payload);
+    if(id){
+      await sbPatch('usuarios','id=eq.'+id,payload);
+      await logSB(null,id?'Usuario editado':'Usuario creado',`Login: ${payload.login} | Nombre: ${payload.nombre} | Rol: ${payload.rol}`,'usuarios');
+    } else {
+      await sbPost('usuarios',payload);
+      await logSB(null,'Usuario creado',`Login: ${payload.login} | Nombre: ${payload.nombre} | Rol: ${payload.rol}`,'usuarios');
+    }
     await loadAll(); closeModal('modal-usuario'); renderUsuarios();
     showNotif(id?'Usuario actualizado':'Usuario creado','success');
   } catch(e){ showNotif('Error: '+e.message,'error'); }
@@ -982,7 +992,9 @@ async function saveUsuario(){
 async function delUsuario(id){
   showLoading(true);
   try {
+    const usr=db.usuarios.find(x=>x.id===id);
     await sbDelete('usuarios','id=eq.'+id);
+    await logSB(null,'Usuario eliminado',`Login: ${usr?.login||'—'} | Nombre: ${usr?.nombre||'—'} | Rol: ${usr?.rol||'—'}`,'usuarios');
     await loadAll(); renderUsuarios();
     showNotif('Usuario eliminado','success');
   } catch(e){ showNotif('Error: '+e.message,'error'); }
@@ -991,6 +1003,32 @@ async function delUsuario(id){
 
 // ==================== HISTORIAL ====================
 function log(eqId,accion,detalle){ logSB(eqId,accion,detalle); } // kept for compat
+
+// Build rich description from equipo object
+function eqDesc(e){
+  if(!e) return '(equipo desconocido)';
+  const parts=[];
+  if(e.etiqueta) parts.push(`Etiqueta: ${e.etiqueta}`);
+  if(e.tipo)     parts.push(`Tipo: ${e.tipo}`);
+  if(e.marca)    parts.push(`Marca: ${e.marca}`);
+  if(e.modelo)   parts.push(`Modelo: ${e.modelo}`);
+  if(e.serie)    parts.push(`Serie: ${e.serie}`);
+  if(e.ubicacion)parts.push(`Ubic: ${e.ubicacion}`);
+  return parts.join(' | ');
+}
+
+// Build diff between old and new equipo
+function eqDiff(oldE, newE){
+  const fields={tipo:'Tipo',marca:'Marca',modelo:'Modelo',serie:'Nº Serie',etiqueta:'Etiqueta',
+    ubicacion:'Ubicación',obs:'Observaciones',estado:'Estado',fecha_enaj:'Fecha destrucción'};
+  const changes=[];
+  for(const [k,label] of Object.entries(fields)){
+    const ov=oldE[k]||'—', nv=newE[k]||'—';
+    if(ov!==nv) changes.push(`${label}: "${ov}" → "${nv}"`);
+  }
+  return changes.length ? changes.join(' | ') : '(sin cambios)';
+}
+
 async function logSB(eqId,accion,detalle,modulo='equipos'){
   try {
     await sbPost('historial',{equipo_id:eqId||null,accion,detalle,usuario:cu?.nombre||'?',modulo});
@@ -1128,7 +1166,8 @@ function eRowCheck(e){
     act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Destruido</button>`;
   }
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
-  return `<tr><td class="check-col"><input type="checkbox" class="chk-retirado" value="${e.id}"></td><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
+  const checkCell=cu&&cu.rol!=='consulta'?`<td class="check-col"><input type="checkbox" class="chk-retirado" value="${e.id}"></td>`:`<td class="check-col"></td>`;
+  return `<tr>${checkCell}<td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
 }
 
 function toggleAllRetirado(checked){
@@ -1144,7 +1183,7 @@ async function destruirMasivo(){
     for(const id of ids){
       const e=db.equipos.find(x=>x.id===id);
       await sbPatch('equipos','id=eq.'+id,{estado:'enajenado',fecha_enaj:hoy});
-      await logSB(id,'Destruido (masivo)',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
+      await logSB(id,'Destruido (masivo)',`${eqDesc(e)} || Estado anterior: ${e?.estado||'—'} → Destruido | Fecha: ${hoy}`);
     }
     await loadAll();refresh();
     renderSub('enajenar','sub-enajenar');
@@ -1244,8 +1283,18 @@ async function saveReparacion(){
   };
   showLoading(true);
   try {
-    if(id){ await sbPatch('reparaciones','id=eq.'+id,payload); await logSB(null,id?'OT editada':'OT creada',`${payload.tipo} ${payload.marca||''} ${payload.ot||''}`.trim(),'reparacion'); }
-    else { const r=await sbPost('reparaciones',payload); await logSB(null,'OT creada',`${payload.tipo} ${payload.marca||''} ${payload.ot||''}`.trim(),'reparacion'); }
+    if(id){
+      const oldR=db.reparaciones.find(x=>x.id===+id)||{};
+      await sbPatch('reparaciones','id=eq.'+id,payload);
+      const repFields={tipo:'Tipo',marca:'Marca',modelo:'Modelo',serie:'Serie',etiqueta:'Etiqueta',ot:'OT',estado_rep:'Estado',ubicacion:'Ubicación',obs:'Observaciones',fecha_ot:'Fecha OT',fecha_traslado:'Fecha traslado'};
+      const changes=Object.entries(repFields).filter(([k])=>(oldR[k]||'—')!==(payload[k]||'—')).map(([k,l])=>`${l}: "${oldR[k]||'—'}" → "${payload[k]||'—'}"`).join(' | ');
+      const repDesc=`OT: ${payload.ot||'—'} | Tipo: ${payload.tipo} | Marca: ${payload.marca||'—'} | Modelo: ${payload.modelo||'—'} | Serie: ${payload.serie||'—'} | Etiqueta: ${payload.etiqueta||'—'}`;
+      await logSB(null,'OT editada',`${repDesc} || Cambios: ${changes||'(sin cambios)'}`, 'reparacion');
+    } else {
+      const r=await sbPost('reparaciones',payload);
+      const repDesc=`OT: ${payload.ot||'—'} | Tipo: ${payload.tipo} | Marca: ${payload.marca||'—'} | Modelo: ${payload.modelo||'—'} | Serie: ${payload.serie||'—'} | Etiqueta: ${payload.etiqueta||'—'}`;
+      await logSB(null,'OT creada',repDesc,'reparacion');
+    }
     await loadAll();closeModal('modal-reparacion');renderReparacion();
     showNotif(id?'OT actualizada':'OT creada','success');
   } catch(e){ showNotif('Error: '+e.message,'error'); }
@@ -1255,7 +1304,9 @@ async function saveReparacion(){
 async function delReparacion(id){
   showLoading(true);
   try {
+    const r=db.reparaciones.find(x=>x.id===id);
     await sbDelete('reparaciones','id=eq.'+id);
+    await logSB(null,'OT eliminada',`OT: ${r?.ot||'—'} | Tipo: ${r?.tipo||'—'} | Marca: ${r?.marca||'—'} | Modelo: ${r?.modelo||'—'} | Serie: ${r?.serie||'—'} | Etiqueta: ${r?.etiqueta||'—'}`,'reparacion');
     await loadAll();renderReparacion();
     showNotif('Equipo eliminado de reparación','success');
   } catch(e){ showNotif('Error: '+e.message,'error'); }
