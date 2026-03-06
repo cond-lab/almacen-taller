@@ -1064,6 +1064,7 @@ function eRowCheck(e){
   let act=`<button class="btn btn-secondary btn-sm" onclick="verDetalle(${e.id})">Ver</button>`;
   if(ce){
     act+=` <button class="btn btn-secondary btn-sm" onclick="editEquipo(${e.id})">Editar</button>`;
+    act+=` <button class="btn btn-secondary btn-sm" onclick="duplicar(${e.id})" title="Duplicar">⧉</button>`;
     act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Destruido</button>`;
   }
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
