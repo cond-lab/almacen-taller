@@ -47,6 +47,14 @@
   .filters-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
   .filter-group{display:flex;align-items:center;gap:6px}
   .filter-label{color:var(--text2);font-size:12px;font-family:'IBM Plex Mono',monospace}
+
+  /* REPARACIÓN */
+  .badge-reparacion{background:rgba(236,72,153,.15);color:#ec4899;border:1px solid rgba(236,72,153,.3)}
+  /* CHECKBOXES tabla */
+  input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+  .check-col{width:32px;text-align:center}
+  .btn-destruir-masivo{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.4);font-weight:600}
+  .btn-destruir-masivo:hover{background:rgba(239,68,68,.3)}
   input[type=text],select{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
   input[type=text]:focus,select:focus{border-color:var(--accent)}
   select option{background:var(--surface2)}
@@ -164,6 +172,7 @@
         <div class="nav-item" onclick="showPage('despiezados')" id="nav-despiezados"><div class="nav-dot" style="background:var(--purple)"></div>Despiezados<span class="count-badge" id="ncd">0</span></div>
         <div class="nav-item" onclick="showPage('almacenados')" id="nav-almacenados"><div class="nav-dot" style="background:var(--blue)"></div>Almacenados<span class="count-badge" id="ncal">0</span></div>
         <div class="nav-item" onclick="showPage('baja')" id="nav-baja"><div class="nav-dot" style="background:var(--red)"></div>Baja<span class="count-badge" id="ncb">0</span></div>
+        <div class="nav-item" onclick="showPage('reparacion')" id="nav-reparacion"><div class="nav-dot" style="background:#ec4899"></div>Reparación<span class="count-badge" id="ncr">0</span></div>
         <div class="nav-item" onclick="showPage('enajenar')" id="nav-enajenar"><div class="nav-dot" style="background:var(--orange)"></div>Retirado<span class="count-badge" id="nce">0</span></div>
         <div class="nav-item" onclick="showPage('enajenados')" id="nav-enajenados"><div class="nav-dot" style="background:var(--green)"></div>Destruido<span class="count-badge" id="ncen">0</span></div>
       </div>
@@ -233,14 +242,30 @@
         </div>
         <div id="sub-baja"></div>
       </div>
+      <!-- REPARACIÓN -->
+      <div class="page" id="page-reparacion">
+        <div class="page-header">
+          <div><div class="page-title">Equipos en Reparación</div><div class="page-subtitle">Gestión de OTs del taller</div></div>
+          <button class="btn btn-primary" id="btn-nuevo-reparacion" onclick="openModalReparacion()">+ Nueva OT</button>
+        </div>
+        <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-rep-search" placeholder="OT, marca, modelo, serie..." oninput="renderReparacion()" style="min-width:240px"></div>
+          <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-rep-marca" onchange="renderReparacion()"><option value="">Todas</option></select></div>
+          <div class="filter-group"><span class="filter-label">estado:</span><select id="filter-rep-estado" onchange="renderReparacion()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="en_curso">En curso</option><option value="terminado">Terminado</option></select></div>
+          <button class="btn btn-secondary btn-sm" onclick="clearRepFilter()">✕</button>
+        </div>
+        <div id="sub-reparacion"></div>
+      </div>
       <div class="page" id="page-enajenar">
         <div class="page-header"><div><div class="page-title">Retirado</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
         <div class="filters-bar" style="margin-bottom:16px">
+          <div class="filter-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chk-all-retirado" onchange="toggleAllRetirado(this.checked)"><span class="filter-label">todos</span></label></div>
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-enaj-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:200px"></div>
           <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-enaj-marca" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todas</option></select></div>
           <div class="filter-group"><span class="filter-label">modelo:</span><select id="filter-enaj-modelo" onchange="renderSub('enajenar','sub-enajenar')"><option value="">Todos</option></select></div>
           <div class="filter-group"><span class="filter-label">ubicación:</span><input type="text" id="filter-enaj-ubicacion" placeholder="Ubicación..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:140px"></div>
           <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('enajenar')">✕</button>
+          <button class="btn btn-destruir-masivo btn-sm" onclick="destruirMasivo()">♻️ Destruir seleccionados</button>
         </div>
         <div id="sub-enajenar"></div>
       </div>
@@ -313,6 +338,55 @@
   </div>
 </div>
 
+
+<!-- MODAL REPARACION -->
+<div class="modal-overlay" id="modal-reparacion">
+  <div class="modal" style="width:680px">
+    <div class="modal-header"><div class="modal-title" id="mrep-title">Nueva OT</div><button class="modal-close" onclick="closeModal('modal-reparacion')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="rep-id">
+      <!-- Lookup inventario -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:14px">
+        <div style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px">🔍 BUSCAR EN INVENTARIO (código, serie, marca o modelo)</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="rep-lookup" placeholder="Escribe para buscar y autorellenar..." oninput="lookupReparacion(this.value)" list="rep-lookup-list" style="flex:1">
+          <datalist id="rep-lookup-list"></datalist>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>TIPOLOGÍA *</label><input type="text" id="rep-tipo" placeholder="PC, Portátil, Monitor..."></div>
+        <div class="form-group"><label>OT (Orden de Trabajo)</label><input type="text" id="rep-ot" placeholder="Nº de OT"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>MARCA</label><input type="text" id="rep-marca" placeholder="Dell, HP, Lenovo..."></div>
+        <div class="form-group"><label>MODELO</label><input type="text" id="rep-modelo" placeholder="Modelo del equipo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Nº SERIE</label><input type="text" id="rep-serie" placeholder="Número de serie" oninput="lookupReparacion(this.value)"></div>
+        <div class="form-group"><label>ETIQUETA INVENTARIO</label><input type="text" id="rep-etiqueta" placeholder="Código interno"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>FECHA OT</label><input type="date" id="rep-fecha-ot"></div>
+        <div class="form-group"><label>FECHA TRASLADO AL ALMACÉN</label><input type="date" id="rep-fecha-traslado"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>UBICACIÓN</label><input type="text" id="rep-ubicacion" placeholder="Estante, caja..."></div>
+        <div class="form-group"><label>ESTADO REPARACIÓN</label>
+          <select id="rep-estado-rep">
+            <option value="pendiente">Pendiente</option>
+            <option value="en_curso">En curso</option>
+            <option value="terminado">Terminado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row full"><div class="form-group"><label>OBSERVACIONES</label><textarea id="rep-obs" placeholder="Descripción del problema, notas..."></textarea></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reparacion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveReparacion()">Guardar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL DETALLE -->
 <div class="modal-overlay" id="modal-detalle">
   <div class="modal">
@@ -371,23 +445,25 @@ const sbPatch = (table, qs, body)   => sbFetch(table + '?' + qs, {method:'PATCH'
 const sbDelete = (table, qs)        => sbFetch(table + '?' + qs, {method:'DELETE'});
 
 // ==================== DATA CACHE ====================
-let db={ equipos:[], piezas:[], usuarios:[], historial:[] };
+let db={ equipos:[], piezas:[], usuarios:[], historial:[], reparaciones:[] };
 let cu=null;
 let hlId=null;
 
 async function loadAll() {
   showLoading(true);
   try {
-    const [equipos, piezas, usuarios, historial] = await Promise.all([
+    const [equipos, piezas, usuarios, historial, reparaciones] = await Promise.all([
       sbGet('equipos','order=created_at.desc'),
       sbGet('piezas','order=id.asc'),
       sbGet('usuarios','order=id.asc'),
       sbGet('historial','order=fecha.desc&limit=300'),
+      sbGet('reparaciones','order=created_at.desc'),
     ]);
-    db.equipos   = equipos   || [];
-    db.piezas    = piezas    || [];
-    db.usuarios  = usuarios  || [];
-    db.historial = historial || [];
+    db.equipos      = equipos      || [];
+    db.piezas       = piezas       || [];
+    db.usuarios     = usuarios     || [];
+    db.historial    = historial    || [];
+    db.reparaciones = reparaciones || [];
   } catch(e) {
     showNotif('Error conectando con Supabase: ' + e.message, 'error');
   }
@@ -417,6 +493,8 @@ async function doLogin(){
     g('header-role').textContent=u.rol;
     const ce=u.rol!=='consulta', ia=u.rol==='admin';
     ['btn-nuevo-equipo','btn-nuevo-despiezado','btn-nuevo-almacenado','btn-nuevo-baja','btn-nuevo-enajenar'].forEach(id=>{const el=g(id);if(el)el.style.display=ce?'':'none'});
+  // btn-nuevo-reparacion visible for all logged users
+  const brep=g('btn-nuevo-reparacion');if(brep)brep.style.display='';
     g('nav-admin-section').style.display=ia?'':'none';
     refresh();
   } catch(e) {
@@ -433,6 +511,7 @@ const PAGES={
   despiezados:{pg:'page-despiezados',nav:'nav-despiezados',state:'despiezado',sub:'sub-despiezados'},
   almacenados:{pg:'page-almacenados',nav:'nav-almacenados',state:'almacenado',sub:'sub-almacenados'},
   baja:{pg:'page-baja',nav:'nav-baja',state:'baja',sub:'sub-baja'},
+  reparacion:{pg:'page-reparacion',nav:'nav-reparacion'},
   enajenar:{pg:'page-enajenar',nav:'nav-enajenar',state:'enajenar',sub:'sub-enajenar'},
   enajenados:{pg:'page-enajenados',nav:'nav-enajenados',state:'enajenado',sub:'sub-enajenados'},
   usuarios:{pg:'page-usuarios',nav:'nav-usuarios'},
@@ -447,6 +526,7 @@ function showPage(page){
   if(page==='equipos')renderTable();
   if(page==='usuarios')renderUsuarios();
   if(page==='historial')renderHistorial();
+  if(page==='reparacion')renderReparacion();
 }
 
 // ==================== STATS ====================
@@ -464,6 +544,7 @@ function updateCounts(){
   g('ncb').textContent=n('baja');
   g('nce').textContent=n('enajenar');
   g('ncen').textContent=n('enajenado');
+  g('ncr').textContent=db.reparaciones?db.reparaciones.length:0;
 }
 
 // ==================== LOOKUP ====================
@@ -617,7 +698,11 @@ function renderSub(state,divId){
     });
   }
   if(!eq.length){g(divId).innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No hay equipos</div></div>';return}
-  g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRow(e)).join('')}</tbody></table></div>`;
+  if(state==='enajenar'){
+    g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th class="check-col"></th><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowCheck(e)).join('')}</tbody></table></div>`;
+  } else {
+    g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRow(e)).join('')}</tbody></table></div>`;
+  }
 }
 
 function clearSubFilter(state){
@@ -972,6 +1057,174 @@ function exportEnajenados(){
   URL.revokeObjectURL(url);
   showNotif('Exportado: '+equipos.length+' equipos','success');
 }
+
+// ==================== RETIRADO CHECKBOXES ====================
+function eRowCheck(e){
+  const ce=cu&&cu.rol!=='consulta',ia=cu&&cu.rol==='admin';
+  let act=`<button class="btn btn-secondary btn-sm" onclick="verDetalle(${e.id})">Ver</button>`;
+  if(ce){
+    act+=` <button class="btn btn-secondary btn-sm" onclick="editEquipo(${e.id})">Editar</button>`;
+    act+=` <button class="btn btn-success btn-sm" onclick="toEnajenado(${e.id})">→ Destruido</button>`;
+  }
+  if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
+  return `<tr><td class="check-col"><input type="checkbox" class="chk-retirado" value="${e.id}"></td><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
+}
+
+function toggleAllRetirado(checked){
+  document.querySelectorAll('.chk-retirado').forEach(c=>c.checked=checked);
+}
+
+async function destruirMasivo(){
+  const ids=[...document.querySelectorAll('.chk-retirado:checked')].map(c=>+c.value);
+  if(!ids.length){showNotif('No hay equipos seleccionados','error');return}
+  const hoy=new Date().toISOString().split('T')[0];
+  showLoading(true);
+  try {
+    for(const id of ids){
+      const e=db.equipos.find(x=>x.id===id);
+      await sbPatch('equipos','id=eq.'+id,{estado:'enajenado',fecha_enaj:hoy});
+      await logSB(id,'Destruido (masivo)',`${e?.tipo||''} ${e?.marca||''} ${e?.modelo||''} — ${hoy}`);
+    }
+    await loadAll();refresh();
+    renderSub('enajenar','sub-enajenar');
+    renderSub('enajenado','sub-enajenados');
+    const chk=g('chk-all-retirado');if(chk)chk.checked=false;
+    showNotif(`${ids.length} equipos marcados como Destruidos`,'success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ==================== REPARACIÓN ====================
+function renderReparacion(){
+  const all=db.reparaciones||[];
+  // populate marca filter
+  const marcas=[...new Set(all.map(r=>r.marca).filter(Boolean))].sort();
+  const mSel=g('filter-rep-marca');
+  if(mSel){const cur=mSel.value;mSel.innerHTML='<option value="">Todas</option>'+marcas.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');}
+  // apply filters
+  const s=(g('filter-rep-search')?.value||'').toLowerCase();
+  const m=g('filter-rep-marca')?.value||'';
+  const est=g('filter-rep-estado')?.value||'';
+  let eq=all.filter(r=>{
+    if(m&&r.marca!==m)return false;
+    if(est&&r.estado_rep!==est)return false;
+    if(s){const h=[r.ot,r.tipo,r.marca,r.modelo,r.serie,r.etiqueta,r.ubicacion,r.obs].join(' ').toLowerCase();if(!h.includes(s))return false;}
+    return true;
+  });
+  const ia=cu&&cu.rol==='admin';
+  const EST_REP={pendiente:'<span class="badge" style="background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3)">⏳ Pendiente</span>',en_curso:'<span class="badge" style="background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)">🔧 En curso</span>',terminado:'<span class="badge" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)">✅ Terminado</span>'};
+  if(!eq.length){g('sub-reparacion').innerHTML='<div class="empty-state"><div class="empty-icon">🔨</div><div class="empty-text">No hay equipos en reparación</div></div>';updateCounts();return;}
+  const rows=eq.map(r=>{
+    let act=`<button class="btn btn-secondary btn-sm" onclick="openModalReparacion(${r.id})">Editar</button>`;
+    if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delReparacion(${r.id})">✕ Taller</button>`;
+    return `<tr>
+      <td class="mono">${r.etiqueta||'—'}</td>
+      <td class="mono">${r.ot||'—'}</td>
+      <td>${r.tipo||'—'}</td>
+      <td>${r.marca||'—'}</td>
+      <td>${r.modelo||'—'}</td>
+      <td class="mono">${r.serie||'—'}</td>
+      <td>${r.fecha_ot||'—'}</td>
+      <td>${r.fecha_traslado||'—'}</td>
+      <td>${EST_REP[r.estado_rep]||r.estado_rep||'—'}</td>
+      <td><div class="actions">${act}</div></td>
+    </tr>`;
+  }).join('');
+  g('sub-reparacion').innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+    <th>Etiqueta</th><th>OT</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Fecha OT</th><th>Fecha Traslado</th><th>Estado</th><th>Acciones</th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
+  updateCounts();
+}
+
+function clearRepFilter(){
+  ['filter-rep-search','filter-rep-marca','filter-rep-estado'].forEach(id=>{const el=g(id);if(el)el.value=''});
+  renderReparacion();
+}
+
+function openModalReparacion(id){
+  g('mrep-title').textContent=id?'Editar OT':'Nueva OT';
+  g('rep-id').value=id||'';
+  if(id){
+    const r=db.reparaciones.find(x=>x.id===id);if(!r)return;
+    g('rep-lookup').value='';
+    g('rep-tipo').value=r.tipo||'';g('rep-ot').value=r.ot||'';
+    g('rep-marca').value=r.marca||'';g('rep-modelo').value=r.modelo||'';
+    g('rep-serie').value=r.serie||'';g('rep-etiqueta').value=r.etiqueta||'';
+    g('rep-fecha-ot').value=r.fecha_ot||'';g('rep-fecha-traslado').value=r.fecha_traslado||'';
+    g('rep-ubicacion').value=r.ubicacion||'';g('rep-obs').value=r.obs||'';
+    g('rep-estado-rep').value=r.estado_rep||'pendiente';
+  } else {
+    ['rep-lookup','rep-tipo','rep-ot','rep-marca','rep-modelo','rep-serie','rep-etiqueta','rep-ubicacion','rep-obs'].forEach(id=>g(id).value='');
+    g('rep-fecha-ot').value=new Date().toISOString().split('T')[0];
+    g('rep-fecha-traslado').value='';
+    g('rep-estado-rep').value='pendiente';
+  }
+  g('modal-reparacion').classList.add('open');
+}
+
+async function saveReparacion(){
+  const tipo=g('rep-tipo').value.trim();
+  if(!tipo){showNotif('La tipología es obligatoria','error');return}
+  const id=g('rep-id').value;
+  const payload={
+    tipo,
+    ot:g('rep-ot').value.trim()||null,
+    marca:g('rep-marca').value.trim()||null,
+    modelo:g('rep-modelo').value.trim()||null,
+    serie:g('rep-serie').value.trim()||null,
+    etiqueta:g('rep-etiqueta').value.trim()||null,
+    fecha_ot:g('rep-fecha-ot').value||null,
+    fecha_traslado:g('rep-fecha-traslado').value||null,
+    ubicacion:g('rep-ubicacion').value.trim()||null,
+    obs:g('rep-obs').value.trim()||null,
+    estado_rep:g('rep-estado-rep').value,
+    usuario:cu?.nombre||'?',
+  };
+  showLoading(true);
+  try {
+    if(id) await sbPatch('reparaciones','id=eq.'+id,payload);
+    else await sbPost('reparaciones',payload);
+    await loadAll();closeModal('modal-reparacion');renderReparacion();
+    showNotif(id?'OT actualizada':'OT creada','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+async function delReparacion(id){
+  showLoading(true);
+  try {
+    await sbDelete('reparaciones','id=eq.'+id);
+    await loadAll();renderReparacion();
+    showNotif('Equipo eliminado de reparación','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+async function lookupReparacion(val){
+  const dl=g('rep-lookup-list');
+  if(!val||!val.trim()){if(dl)dl.innerHTML='';return;}
+  try {
+    const v=encodeURIComponent(val);
+    const rows=await sbGet('inventario',
+      `or=(codigo.ilike.*${v}*,serie.ilike.*${v}*,marca.ilike.*${v}*,modelo.ilike.*${v}*)&limit=10&order=codigo.asc`
+    );
+    if(dl&&rows) dl.innerHTML=rows.map(r=>`<option value="${r.codigo}">${r.tipo||''} ${r.marca||''} ${r.modelo||''} — ${r.serie||''}</option>`).join('');
+    const src=rows&&(
+      rows.find(r=>r.codigo&&r.codigo.toLowerCase()===val.toLowerCase())||
+      rows.find(r=>r.serie&&r.serie.toLowerCase()===val.toLowerCase())||
+      (rows.length===1?rows[0]:null)
+    );
+    if(src){
+      if(src.tipo)  g('rep-tipo').value=src.tipo;
+      if(src.marca) g('rep-marca').value=src.marca;
+      if(src.modelo)g('rep-modelo').value=src.modelo;
+      if(src.serie) g('rep-serie').value=src.serie;
+      g('rep-etiqueta').value=src.codigo||'';
+      showNotif('Datos cargados: '+src.codigo,'success');
+    }
+  } catch(e){ console.warn('lookup rep error:',e); }
+}
+
 // ==================== INIT ====================
 // DB loaded after login via loadAll()
 </script>
