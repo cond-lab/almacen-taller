@@ -178,6 +178,7 @@
       </div>
       <div class="nav-section" id="nav-admin-section">
         <div class="nav-label">Administración</div>
+        <div class="nav-item" onclick="showPage('tecnicos')" id="nav-tecnicos"><div class="nav-dot" style="background:#06b6d4"></div>Técnicos</div>
         <div class="nav-item" onclick="showPage('usuarios')" id="nav-usuarios"><div class="nav-dot" style="background:var(--accent)"></div>Usuarios</div>
         <div class="nav-item" onclick="showPage('historial')" id="nav-historial"><div class="nav-dot" style="background:var(--text2)"></div>Historial</div>
       </div>
@@ -272,7 +273,7 @@
       <div class="page" id="page-enajenados">
         <div class="page-header">
           <div><div class="page-title">Destruido</div><div class="page-subtitle">Destruidos por gestora de residuos</div></div>
-          <button class="btn btn-secondary" id="btn-export-destruido" onclick="exportEnajenados()">⬇ Exportar Excel</button>
+          <button class="btn btn-secondary" id="btn-export-destruido" onclick="exportEnajenados()" style="display:none">⬇ Exportar Excel</button>
         </div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-dest-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenado','sub-enajenados')" style="min-width:200px"></div>
@@ -288,6 +289,12 @@
       </div>
 
       <!-- USUARIOS -->
+      <!-- TÉCNICOS -->
+      <div class="page" id="page-tecnicos">
+        <div class="page-header"><div><div class="page-title">Técnicos</div><div class="page-subtitle">Lista de técnicos de reparación</div></div><button class="btn btn-primary" onclick="openModalTecnico()">+ Nuevo técnico</button></div>
+        <div id="lista-tecnicos"></div>
+      </div>
+
       <div class="page" id="page-usuarios">
         <div class="page-header"><div><div class="page-title">Usuarios</div><div class="page-subtitle">Gestión de accesos</div></div><button class="btn btn-primary" onclick="openModalUsuario()">+ Nuevo usuario</button></div>
         <div id="lista-usuarios"></div>
@@ -402,11 +409,31 @@
           </select>
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label>TÉCNICO</label><select id="rep-tecnico"><option value="">— Sin asignar —</option></select></div>
+      </div>
       <div class="form-row full"><div class="form-group"><label>OBSERVACIONES</label><textarea id="rep-obs" placeholder="Descripción del problema, notas..."></textarea></div></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-reparacion')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveReparacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TÉCNICO -->
+<div class="modal-overlay" id="modal-tecnico">
+  <div class="modal" style="width:420px">
+    <div class="modal-header"><div class="modal-title" id="mtec-title">Nuevo técnico</div><button class="modal-close" onclick="closeModal('modal-tecnico')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="tec-id">
+      <div class="form-group"><label>NOMBRE *</label><input type="text" id="tec-nombre" placeholder="Nombre completo del técnico"></div>
+      <div class="form-group" style="margin-top:12px"><label>ESPECIALIDAD</label><input type="text" id="tec-especialidad" placeholder="Electrónica, Redes, Hardware..."></div>
+      <div class="form-group" style="margin-top:12px"><label>OBSERVACIONES</label><textarea id="tec-obs" placeholder="Notas..." style="height:80px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tecnico')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTecnico()">Guardar</button>
     </div>
   </div>
 </div>
@@ -468,25 +495,27 @@ const sbPatch = (table, qs, body)   => sbFetch(table + '?' + qs, {method:'PATCH'
 const sbDelete = (table, qs)        => sbFetch(table + '?' + qs, {method:'DELETE'});
 
 // ==================== DATA CACHE ====================
-let db={ equipos:[], piezas:[], usuarios:[], historial:[], reparaciones:[] };
+let db={ equipos:[], piezas:[], usuarios:[], historial:[], reparaciones:[], tecnicos:[] };
 let cu=null;
 let hlId=null;
 
 async function loadAll() {
   showLoading(true);
   try {
-    const [equipos, piezas, usuarios, historial, reparaciones] = await Promise.all([
+    const [equipos, piezas, usuarios, historial, reparaciones, tecnicos] = await Promise.all([
       sbGet('equipos','order=created_at.desc'),
       sbGet('piezas','order=id.asc'),
       sbGet('usuarios','order=id.asc'),
       sbGet('historial','order=fecha.desc&limit=1000'),
       sbGet('reparaciones','order=created_at.desc'),
+      sbGet('tecnicos','order=nombre.asc'),
     ]);
     db.equipos      = equipos      || [];
     db.piezas       = piezas       || [];
     db.usuarios     = usuarios     || [];
     db.historial    = historial    || [];
     db.reparaciones = reparaciones || [];
+    db.tecnicos     = tecnicos     || [];
   } catch(e) {
     showNotif('Error conectando con Supabase: ' + e.message, 'error');
   }
@@ -541,6 +570,7 @@ const PAGES={
   reparacion:{pg:'page-reparacion',nav:'nav-reparacion'},
   enajenar:{pg:'page-enajenar',nav:'nav-enajenar',state:'enajenar',sub:'sub-enajenar'},
   enajenados:{pg:'page-enajenados',nav:'nav-enajenados',state:'enajenado',sub:'sub-enajenados'},
+  tecnicos:{pg:'page-tecnicos',nav:'nav-tecnicos'},
   usuarios:{pg:'page-usuarios',nav:'nav-usuarios'},
   historial:{pg:'page-historial',nav:'nav-historial'},
 };
@@ -552,6 +582,7 @@ function showPage(page){
   if(m.sub)renderSub(m.state,m.sub);
   if(page==='equipos')renderTable();
   if(page==='usuarios')renderUsuarios();
+  if(page==='tecnicos')renderTecnicos();
   if(page==='historial')renderHistorial();
   if(page==='reparacion')renderReparacion();
 }
@@ -750,6 +781,8 @@ function renderSub(state,divId){
       return true;
     });
     const cnt=g('dest-count');if(cnt)cnt.textContent=eq.length+' equipos';
+    // export button visibility based on current role
+    const bex=g('btn-export-destruido');if(bex)bex.style.display=(cu&&cu.rol!=='consulta')?'':'none';
   }
   if(state==='enajenar'){
     g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th class="check-col"></th><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowCheck(e)).join('')}</tbody></table></div>`;
@@ -1271,11 +1304,12 @@ function renderReparacion(){
       <td>${r.fecha_ot||'—'}</td>
       <td>${r.fecha_traslado||'—'}</td>
       <td>${EST_REP[r.estado_rep]||r.estado_rep||'—'}</td>
+      <td>${(db.tecnicos.find(t=>t.id===r.tecnico_id)?.nombre)||'—'}</td>
       <td><div class="actions">${act}</div></td>
     </tr>`;
   }).join('');
   g('sub-reparacion').innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
-    <th>Etiqueta</th><th>OT</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Fecha OT</th><th>Fecha Traslado</th><th>Estado</th><th>Acciones</th>
+    <th>Etiqueta</th><th>OT</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Fecha OT</th><th>Fecha Traslado</th><th>Estado</th><th>Técnico</th><th>Acciones</th>
   </tr></thead><tbody>${rows}</tbody></table></div>`;
   updateCounts();
 }
@@ -1288,6 +1322,12 @@ function clearRepFilter(){
 function openModalReparacion(id){
   g('mrep-title').textContent=id?'Editar OT':'Nueva OT';
   g('rep-id').value=id||'';
+  // populate técnico select
+  const tsel=g('rep-tecnico');
+  if(tsel){
+    tsel.innerHTML='<option value="">— Sin asignar —</option>'+
+      db.tecnicos.map(t=>`<option value="${t.id}">${t.nombre}${t.especialidad?' ('+t.especialidad+')':''}</option>`).join('');
+  }
   if(id){
     const r=db.reparaciones.find(x=>x.id===id);if(!r)return;
     g('rep-lookup').value='';
@@ -1297,11 +1337,13 @@ function openModalReparacion(id){
     g('rep-fecha-ot').value=r.fecha_ot||'';g('rep-fecha-traslado').value=r.fecha_traslado||'';
     g('rep-ubicacion').value=r.ubicacion||'';g('rep-obs').value=r.obs||'';
     g('rep-estado-rep').value=r.estado_rep||'pendiente';
+    if(tsel&&r.tecnico_id) tsel.value=r.tecnico_id;
   } else {
     ['rep-lookup','rep-tipo','rep-ot','rep-marca','rep-modelo','rep-serie','rep-etiqueta','rep-ubicacion','rep-obs'].forEach(id=>g(id).value='');
     g('rep-fecha-ot').value=new Date().toISOString().split('T')[0];
     g('rep-fecha-traslado').value='';
     g('rep-estado-rep').value='pendiente';
+    if(tsel) tsel.value='';
   }
   g('modal-reparacion').classList.add('open');
 }
@@ -1322,6 +1364,7 @@ async function saveReparacion(){
     ubicacion:g('rep-ubicacion').value.trim()||null,
     obs:g('rep-obs').value.trim()||null,
     estado_rep:g('rep-estado-rep').value,
+    tecnico_id:g('rep-tecnico').value?+g('rep-tecnico').value:null,
     usuario:cu?.nombre||'?',
   };
   showLoading(true);
@@ -1412,6 +1455,67 @@ function eRowDest(e){
   if(ce) act+=` <button class="btn btn-secondary btn-sm" onclick="duplicar(${e.id})" title="Duplicar">⧉</button>`;
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
   return `<tr><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td style="color:var(--green)">${e.fecha_enaj||'—'}</td><td><div class="actions">${act}</div></td></tr>`;
+}
+
+
+// ==================== TÉCNICOS ====================
+function renderTecnicos(){
+  const el=g('lista-tecnicos');
+  if(!db.tecnicos.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-text">No hay técnicos</div></div>';return}
+  el.innerHTML=db.tecnicos.map(t=>`
+    <div class="user-card">
+      <div class="user-card-info">
+        <div class="user-avatar" style="background:rgba(6,182,212,.15);color:#06b6d4;border-color:rgba(6,182,212,.3)">${t.nombre[0].toUpperCase()}</div>
+        <div>
+          <div style="font-weight:500">${t.nombre}</div>
+          ${t.especialidad?`<div style="font-size:12px;color:var(--text2)">${t.especialidad}</div>`:''}
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="openModalTecnico(${t.id})">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="delTecnico(${t.id})">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+
+function openModalTecnico(id){
+  g('mtec-title').textContent=id?'Editar técnico':'Nuevo técnico';
+  g('tec-id').value=id||'';
+  if(id){
+    const t=db.tecnicos.find(x=>x.id===id);if(!t)return;
+    g('tec-nombre').value=t.nombre||'';
+    g('tec-especialidad').value=t.especialidad||'';
+    g('tec-obs').value=t.obs||'';
+  } else {
+    g('tec-nombre').value='';g('tec-especialidad').value='';g('tec-obs').value='';
+  }
+  g('modal-tecnico').classList.add('open');
+}
+
+async function saveTecnico(){
+  const nombre=g('tec-nombre').value.trim();
+  if(!nombre){showNotif('El nombre es obligatorio','error');return}
+  const id=g('tec-id').value;
+  const payload={nombre,especialidad:g('tec-especialidad').value.trim()||null,obs:g('tec-obs').value.trim()||null};
+  showLoading(true);
+  try {
+    if(id) await sbPatch('tecnicos','id=eq.'+id,payload);
+    else await sbPost('tecnicos',payload);
+    await loadAll();closeModal('modal-tecnico');renderTecnicos();
+    showNotif(id?'Técnico actualizado':'Técnico añadido','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
+}
+
+async function delTecnico(id){
+  showLoading(true);
+  try {
+    const t=db.tecnicos.find(x=>x.id===id);
+    await sbDelete('tecnicos','id=eq.'+id);
+    await loadAll();renderTecnicos();
+    showNotif('Técnico eliminado','success');
+  } catch(e){ showNotif('Error: '+e.message,'error'); }
+  showLoading(false);
 }
 
 // ==================== INIT ====================
