@@ -267,6 +267,7 @@
           <div class="filter-group"><span class="filter-label">ubicación:</span><input type="text" id="filter-enaj-ubicacion" placeholder="Ubicación..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:140px"></div>
           <button class="btn btn-secondary btn-sm" onclick="clearSubFilter('enajenar')">✕</button>
           <button class="btn btn-destruir-masivo btn-sm" id="btn-destruir-masivo" onclick="destruirMasivo()">♻️ Destruir seleccionados</button>
+          <button class="btn btn-secondary btn-sm" id="btn-export-retirado" onclick="exportRetiradoSeleccionados()" style="display:none">⬇ Exportar seleccionados</button>
         </div>
         <div id="sub-enajenar"></div>
       </div>
@@ -551,6 +552,7 @@ async function doLogin(){
     const bkd=g('btn-destruir-masivo');if(bkd)bkd.style.display=ce?'':'none';
     const gkd=g('grp-chk-all-retirado');if(gkd)gkd.style.display=ce?'':'none';
     const bex=g('btn-export-destruido');if(bex)bex.style.display=ce?'':'none';
+    const ber=g('btn-export-retirado');if(ber)ber.style.display=ce?'':'none';
     g('nav-admin-section').style.display=ia?'':'none';
     refresh();
   } catch(e) {
@@ -1230,6 +1232,28 @@ function exportEnajenados(){
   a.click();
   URL.revokeObjectURL(url);
   showNotif('Exportado: '+equipos.length+' equipos','success');
+}
+
+function exportRetiradoSeleccionados(){
+  const ids=[...document.querySelectorAll('.chk-retirado:checked')].map(c=>parseInt(c.value));
+  if(!ids.length){showNotif('Selecciona al menos un equipo','error');return}
+  const equipos=db.equipos.filter(e=>ids.includes(e.id));
+  const cols=['etiqueta','tipo','marca','modelo','serie','obs'];
+  const headers=['Etiqueta','Tipología','Marca','Modelo','Nº Serie','Observaciones'];
+  const rows=[headers.join(';')];
+  equipos.forEach(e=>{
+    const row=cols.map(col=>'"'+String(e[col]||'').replace(/"/g,'""')+'"');
+    rows.push(row.join(';'));
+  });
+  const csv='﻿'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='retirado_seleccionados_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotif('Exportados: '+equipos.length+' equipos','success');
 }
 
 // ==================== RETIRADO CHECKBOXES ====================
