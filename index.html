@@ -190,7 +190,10 @@
       <div class="page active" id="page-equipos">
         <div class="page-header">
           <div><div class="page-title">Todos los equipos</div><div class="page-subtitle">Inventario completo del almacén</div></div>
-          <button class="btn btn-primary" id="btn-nuevo-equipo" onclick="openModalNuevo()">+ Nuevo equipo</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary" id="btn-export-todos" onclick="exportSection('todos')" style="display:none">⬇ Exportar</button>
+            <button class="btn btn-primary" id="btn-nuevo-equipo" onclick="openModalNuevo()">+ Nuevo equipo</button>
+          </div>
         </div>
         <div class="stats-grid">
           <div class="stat-card"><div><div class="stat-value" id="st0">0</div><div class="stat-label">Total</div></div><div class="stat-icon">📦</div></div>
@@ -215,12 +218,12 @@
           <div class="filter-group"><span class="filter-label">estado:</span><select id="filter-estado" onchange="renderTable()"><option value="">Todos</option></select></div>
           <button class="btn btn-secondary btn-sm" onclick="clearFilters()">✕ limpiar</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tabla-equipos"></tbody></table></div>
+        <div class="table-wrap" style="overflow-x:auto"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Observaciones</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tabla-equipos"></tbody></table></div>
       </div>
 
       <!-- SUB PÁGINAS -->
       <div class="page" id="page-despiezados">
-        <div class="page-header"><div><div class="page-title">Equipos Despiezados</div><div class="page-subtitle">Desmontados y con piezas inventariadas</div></div><button class="btn btn-primary" id="btn-nuevo-despiezado" onclick="openModalNuevo('despiezado')">+ Nuevo</button></div>
+        <div class="page-header"><div><div class="page-title">Equipos Despiezados</div><div class="page-subtitle">Desmontados y con piezas inventariadas</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" id="btn-export-despiezados" onclick="exportSection('despiezado')" style="display:none">⬇ Exportar</button><button class="btn btn-primary" id="btn-nuevo-despiezado" onclick="openModalNuevo('despiezado')">+ Nuevo</button></div></div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-desp-search" placeholder="Marca, modelo, serie, piezas..." oninput="renderSub('despiezado','sub-despiezados')" style="min-width:240px"></div>
           <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-desp-marca" onchange="renderSub('despiezado','sub-despiezados')"><option value="">Todas</option></select></div>
@@ -230,11 +233,11 @@
         <div id="sub-despiezados"></div>
       </div>
       <div class="page" id="page-almacenados">
-        <div class="page-header"><div><div class="page-title">Equipos Almacenados</div><div class="page-subtitle">En uso pero almacenados</div></div><button class="btn btn-primary" id="btn-nuevo-almacenado" onclick="openModalNuevo('almacenado')">+ Nuevo</button></div>
+        <div class="page-header"><div><div class="page-title">Equipos Almacenados</div><div class="page-subtitle">En uso pero almacenados</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" id="btn-export-almacenados" onclick="exportSection('almacenado')" style="display:none">⬇ Exportar</button><button class="btn btn-primary" id="btn-nuevo-almacenado" onclick="openModalNuevo('almacenado')">+ Nuevo</button></div></div>
         <div id="sub-almacenados"></div>
       </div>
       <div class="page" id="page-baja">
-        <div class="page-header"><div><div class="page-title">Equipos de Baja</div><div class="page-subtitle">Pendientes de decisión</div></div><button class="btn btn-primary" id="btn-nuevo-baja" onclick="openModalNuevo('baja')">+ Nuevo</button></div>
+        <div class="page-header"><div><div class="page-title">Equipos de Baja</div><div class="page-subtitle">Pendientes de decisión</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" id="btn-export-baja" onclick="exportSection('baja')" style="display:none">⬇ Exportar</button><button class="btn btn-primary" id="btn-nuevo-baja" onclick="openModalNuevo('baja')">+ Nuevo</button></div></div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-baja-search" placeholder="Marca, modelo, serie..." oninput="renderSub('baja','sub-baja')" style="min-width:200px"></div>
           <div class="filter-group"><span class="filter-label">marca:</span><select id="filter-baja-marca" onchange="renderSub('baja','sub-baja')"><option value="">Todas</option></select></div>
@@ -247,7 +250,10 @@
       <div class="page" id="page-reparacion">
         <div class="page-header">
           <div><div class="page-title">Equipos en Reparación</div><div class="page-subtitle">Gestión de OTs del taller</div></div>
-          <button class="btn btn-primary" id="btn-nuevo-reparacion" onclick="openModalReparacion()">+ Nueva OT</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary" id="btn-export-reparacion" onclick="exportSection('reparacion')" style="display:none">⬇ Exportar</button>
+            <button class="btn btn-primary" id="btn-nuevo-reparacion" onclick="openModalReparacion()">+ Nueva OT</button>
+          </div>
         </div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-rep-search" placeholder="OT, marca, modelo, serie..." oninput="renderReparacion()" style="min-width:240px"></div>
@@ -258,7 +264,7 @@
         <div id="sub-reparacion"></div>
       </div>
       <div class="page" id="page-enajenar">
-        <div class="page-header"><div><div class="page-title">Retirado</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div>
+        <div class="page-header"><div><div class="page-title">Retirado</div><div class="page-subtitle">Pendientes de recogida por gestora de residuos</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" id="btn-export-enajenar" onclick="exportSection('enajenar')" style="display:none">⬇ Exportar todo</button><button class="btn btn-primary" id="btn-nuevo-enajenar" onclick="openModalNuevo('enajenar')">+ Nuevo</button></div></div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group" id="grp-chk-all-retirado"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="chk-all-retirado" onchange="toggleAllRetirado(this.checked)"><span class="filter-label">todos</span></label></div>
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-enaj-search" placeholder="Marca, modelo, serie..." oninput="renderSub('enajenar','sub-enajenar')" style="min-width:200px"></div>
@@ -303,7 +309,7 @@
 
       <!-- HISTORIAL -->
       <div class="page" id="page-historial">
-        <div class="page-header"><div><div class="page-title">Historial</div><div class="page-subtitle">Registro completo de actividad</div></div></div>
+        <div class="page-header"><div><div class="page-title">Historial</div><div class="page-subtitle">Registro completo de actividad</div></div><button class="btn btn-secondary" id="btn-export-historial" onclick="exportSection('historial')" style="display:none">⬇ Exportar</button></div>
         <div class="filters-bar" style="margin-bottom:16px">
           <div class="filter-group"><span class="filter-label">buscar:</span><input type="text" id="filter-hist-search" placeholder="Equipo, detalle..." oninput="renderHistorial()" style="min-width:200px"></div>
           <div class="filter-group"><span class="filter-label">usuario:</span><select id="filter-hist-usuario" onchange="renderHistorial()"><option value="">Todos</option></select></div>
@@ -551,8 +557,12 @@ async function doLogin(){
     // checkboxes destruccion masiva solo editor/admin
     const bkd=g('btn-destruir-masivo');if(bkd)bkd.style.display=ce?'':'none';
     const gkd=g('grp-chk-all-retirado');if(gkd)gkd.style.display=ce?'':'none';
+    // exportar destruido/retirado seleccionados: editor+admin
     const bex=g('btn-export-destruido');if(bex)bex.style.display=ce?'':'none';
     const ber=g('btn-export-retirado');if(ber)ber.style.display=ce?'':'none';
+    // botones exportar sección: solo admin
+    ['btn-export-todos','btn-export-despiezados','btn-export-almacenados','btn-export-baja',
+     'btn-export-enajenar','btn-export-reparacion','btn-export-historial'].forEach(id=>{const el=g(id);if(el)el.style.display=ia?'':'none'});
     g('nav-admin-section').style.display=ia?'':'none';
     refresh();
   } catch(e) {
@@ -684,7 +694,8 @@ function eRow(e){
   }
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
   const hl=hlId===e.id?' class="hl-row"':'';
-  return `<tr${hl}><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
+  const obsShort=e.obs?(e.obs.length>60?e.obs.slice(0,60)+'…':e.obs):'—';
+  return `<tr${hl}><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td style="max-width:180px;color:var(--text2);font-size:12px" title="${(e.obs||'').replace(/"/g,'&quot;')}">${obsShort}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
 }
 
 function renderTable(){
@@ -787,11 +798,11 @@ function renderSub(state,divId){
     const bex=g('btn-export-destruido');if(bex)bex.style.display=(cu&&cu.rol!=='consulta')?'':'none';
   }
   if(state==='enajenar'){
-    g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th class="check-col"></th><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowCheck(e)).join('')}</tbody></table></div>`;
+    g(divId).innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr><th class="check-col"></th><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Observaciones</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowCheck(e)).join('')}</tbody></table></div>`;
   } else if(state==='enajenado'){
-    g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Fecha Destrucción</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowDest(e)).join('')}</tbody></table></div>`;
+    g(divId).innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Observaciones</th><th>Fecha Destrucción</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRowDest(e)).join('')}</tbody></table></div>`;
   } else {
-    g(divId).innerHTML=`<div class="table-wrap"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRow(e)).join('')}</tbody></table></div>`;
+    g(divId).innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr><th>Etiqueta</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Ubicación</th><th>Observaciones</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${eq.map(e=>eRow(e)).join('')}</tbody></table></div>`;
   }
 }
 
@@ -1208,6 +1219,54 @@ async function lookupEtiquetaForm(val){
   } catch(e){ console.warn('lookup error:',e); }
 }
 
+// ==================== EXPORTAR SECCIONES (ADMIN) ====================
+function exportSection(section){
+  const EQ_COLS=['etiqueta','tipo','marca','modelo','serie','ubicacion','obs','estado'];
+  const EQ_HDR=['Etiqueta','Tipología','Marca','Modelo','Nº Serie','Ubicación','Observaciones','Estado'];
+  function csvRow(cols,obj,extra){
+    return cols.map(c=>{
+      let v=obj[c]!=null?obj[c]:'';
+      if(c==='estado')v=ELBL_T[v]||v;
+      return '"'+String(v).replace(/"/g,'""')+'"';
+    }).join(';')+(extra?';'+extra:'');
+  }
+  function download(rows,filename){
+    const csv='﻿'+rows.join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename+'_'+new Date().toISOString().split('T')[0]+'.csv';a.click();URL.revokeObjectURL(url);
+  }
+  if(section==='todos'){
+    const data=db.equipos;
+    if(!data.length){showNotif('No hay equipos','error');return}
+    const rows=[EQ_HDR.join(';'),...data.map(e=>csvRow(EQ_COLS,e))];
+    download(rows,'todos_equipos');showNotif('Exportados: '+data.length+' equipos','success');
+  } else if(['despiezado','almacenado','baja','enajenar'].includes(section)){
+    const data=db.equipos.filter(e=>e.estado===section);
+    if(!data.length){showNotif('No hay equipos en este estado','error');return}
+    const rows=[EQ_HDR.join(';'),...data.map(e=>csvRow(EQ_COLS,e))];
+    const names={despiezado:'despiezados',almacenado:'almacenados',baja:'baja',enajenar:'retirado'};
+    download(rows,names[section]);showNotif('Exportados: '+data.length+' equipos','success');
+  } else if(section==='reparacion'){
+    const data=db.reparaciones||[];
+    if(!data.length){showNotif('No hay reparaciones','error');return}
+    const cols=['etiqueta','ot','tipo','marca','modelo','serie','fecha_ot','fecha_traslado','estado_rep','ubicacion','obs'];
+    const hdrs=['Etiqueta','OT','Tipología','Marca','Modelo','Nº Serie','Fecha OT','Fecha Traslado','Estado','Ubicación','Observaciones'];
+    const rows=[hdrs.join(';')+';"Técnico"',...data.map(r=>{
+      const tecNombre=(db.tecnicos.find(t=>t.id===r.tecnico_id)?.nombre)||'';
+      return cols.map(c=>'"'+String(r[c]!=null?r[c]:'').replace(/"/g,'""')+'"').join(';')+';"'+tecNombre.replace(/"/g,'""')+'"';
+    })];
+    download(rows,'reparaciones');showNotif('Exportadas: '+data.length+' OTs','success');
+  } else if(section==='historial'){
+    const data=db.historial||[];
+    if(!data.length){showNotif('No hay historial','error');return}
+    const cols=['fecha','accion','detalle','usuario','modulo'];
+    const hdrs=['Fecha','Acción','Detalle','Usuario','Módulo'];
+    const rows=[hdrs.join(';'),...data.map(h=>cols.map(c=>'"'+String(h[c]!=null?h[c]:'').replace(/"/g,'""')+'"').join(';'))];
+    download(rows,'historial');showNotif('Exportadas: '+data.length+' entradas','success');
+  }
+}
+
 function exportEnajenados(){
   const equipos=db.equipos.filter(e=>e.estado==='enajenado');
   if(!equipos.length){showNotif('No hay equipos destruidos','error');return}
@@ -1267,7 +1326,8 @@ function eRowCheck(e){
   }
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
   const checkCell=cu&&cu.rol!=='consulta'?`<td class="check-col"><input type="checkbox" class="chk-retirado" value="${e.id}"></td>`:`<td class="check-col"></td>`;
-  return `<tr>${checkCell}<td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
+  const obsShortR=e.obs?(e.obs.length>60?e.obs.slice(0,60)+'…':e.obs):'—';
+  return `<tr>${checkCell}<td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td style="max-width:180px;color:var(--text2);font-size:12px" title="${(e.obs||'').replace(/"/g,'&quot;')}">${obsShortR}</td><td>${ELBL[e.estado]||e.estado}</td><td><div class="actions">${act}</div></td></tr>`;
 }
 
 function toggleAllRetirado(checked){
@@ -1329,11 +1389,12 @@ function renderReparacion(){
       <td>${r.fecha_traslado||'—'}</td>
       <td>${EST_REP[r.estado_rep]||r.estado_rep||'—'}</td>
       <td>${(db.tecnicos.find(t=>t.id===r.tecnico_id)?.nombre)||'—'}</td>
+      <td style="max-width:160px;color:var(--text2);font-size:12px" title="${(r.obs||'').replace(/"/g,'&quot;')}">${r.obs?(r.obs.length>50?r.obs.slice(0,50)+'…':r.obs):'—'}</td>
       <td><div class="actions">${act}</div></td>
     </tr>`;
   }).join('');
   g('sub-reparacion').innerHTML=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
-    <th>Etiqueta</th><th>OT</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Fecha OT</th><th>Fecha Traslado</th><th>Estado</th><th>Técnico</th><th>Acciones</th>
+    <th>Etiqueta</th><th>OT</th><th>Tipología</th><th>Marca</th><th>Modelo</th><th>Nº Serie</th><th>Fecha OT</th><th>Fecha Traslado</th><th>Estado</th><th>Técnico</th><th>Observaciones</th><th>Acciones</th>
   </tr></thead><tbody>${rows}</tbody></table></div>`;
   updateCounts();
 }
@@ -1478,7 +1539,8 @@ function eRowDest(e){
   if(ce) act+=` <button class="btn btn-secondary btn-sm" onclick="editEquipo(${e.id})">Editar</button>`;
   if(ce) act+=` <button class="btn btn-secondary btn-sm" onclick="duplicar(${e.id})" title="Duplicar">⧉</button>`;
   if(ia) act+=` <button class="btn btn-danger btn-sm" onclick="delEquipo(${e.id})">✕</button>`;
-  return `<tr><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td style="color:var(--green)">${e.fecha_enaj||'—'}</td><td><div class="actions">${act}</div></td></tr>`;
+  const obsShortD=e.obs?(e.obs.length>60?e.obs.slice(0,60)+'…':e.obs):'—';
+  return `<tr><td class="mono">${e.etiqueta||'—'}</td><td>${e.tipo||'—'}</td><td>${e.marca||'—'}</td><td>${e.modelo||'—'}</td><td class="mono">${e.serie||'—'}</td><td>${e.ubicacion||'—'}</td><td style="max-width:180px;color:var(--text2);font-size:12px" title="${(e.obs||'').replace(/"/g,'&quot;')}">${obsShortD}</td><td style="color:var(--green)">${e.fecha_enaj||'—'}</td><td><div class="actions">${act}</div></td></tr>`;
 }
 
 
