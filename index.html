@@ -148,7 +148,7 @@
     <div class="login-logo">ALMACÉN</div>
     <div class="login-sub">Control de equipos — Taller</div>
     <div class="form-group"><label>Usuario</label><input type="text" id="login-user" placeholder="nombre de usuario" autocomplete="off"></div>
-    <div class="form-group"><label>Contraseña</label><input type="text" id="login-pass" placeholder="contraseña"></div>
+    <div class="form-group" style="position:relative"><label>Contraseña</label><input type="password" id="login-pass" placeholder="contraseña" style="padding-right:38px"><button type="button" onclick="const i=g('login-pass');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:8px;bottom:8px;background:none;border:none;cursor:pointer;font-size:15px;color:var(--text2);padding:0;line-height:1">👁</button></div>
     <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
     <button class="btn btn-primary" onclick="doLogin()">ENTRAR</button>
 
