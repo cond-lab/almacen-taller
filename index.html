@@ -1032,6 +1032,7 @@ function openModalNuevo(estado){
   if(!cu||cu.rol==='consulta')return;
   g('meq-title').textContent='Nuevo equipo';
   g('eq-id').value='';
+  lastFormFill=null;
   ['eq-tipo','eq-marca','eq-modelo','eq-serie','eq-etiqueta','eq-ubicacion','eq-obs'].forEach(id=>g(id).value='');
   g('eq-estado').value=estado||'despiezado';
   g('eq-fecha-enaj').value='';
@@ -1062,6 +1063,7 @@ function duplicar(id){
   const e=JSON.parse(JSON.stringify(src)); // deep copy
   g('meq-title').textContent='Nuevo equipo (duplicado de '+(e.etiqueta||'#'+id)+')';
   g('eq-id').value=''; // no id → will create new record
+  lastFormFill=null;
   g('eq-tipo').value=e.tipo||'';g('eq-estado').value=e.estado;
   g('eq-marca').value=e.marca||'';g('eq-modelo').value=e.modelo||'';
   g('eq-serie').value='';   // serie vacía — equipo distinto
@@ -1373,6 +1375,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click
 function showNotif(msg,type='success'){const n=g('notif');n.textContent=msg;n.className=`notif ${type} show`;setTimeout(()=>n.classList.remove('show'),3200)}
 
 
+let lastFormFill=null; // codigo already autofilled in the open equipo modal
 async function lookupEtiquetaForm(val){
   const dl=g('etiquetas-list');
   if(!val.trim()){if(dl)dl.innerHTML='';return;}
@@ -1389,13 +1392,16 @@ async function lookupEtiquetaForm(val){
       const sdl=g('series-list');
       if(sdl)sdl.innerHTML=rows.map(r=>`<option value="${r.serie||''}">${r.tipo||''} ${r.marca||''} ${r.modelo||''}</option>`).join('');
     }
-    // autofill if exact match on codigo or serie, or single result
+    // ignore stale responses: the user kept typing while this request was in flight
+    if(document.activeElement&&document.activeElement.value!==val)return;
+    // autofill only on exact match of codigo or serie (partial matches just feed the suggestions),
+    // and only once per code so the user can still overwrite the filled fields
     const src = rows && (
       rows.find(r=>r.codigo&&r.codigo.toLowerCase()===val.toLowerCase()) ||
-      rows.find(r=>r.serie&&r.serie.toLowerCase()===val.toLowerCase()) ||
-      (rows.length===1?rows[0]:null)
+      rows.find(r=>r.serie&&r.serie.toLowerCase()===val.toLowerCase())
     );
-    if(src){
+    if(src&&src.codigo!==lastFormFill){
+      lastFormFill=src.codigo;
       if(src.tipo)  g('eq-tipo').value=src.tipo;
       if(src.marca) g('eq-marca').value=src.marca;
       if(src.modelo)g('eq-modelo').value=src.modelo;
@@ -1680,10 +1686,13 @@ async function lookupReparacion(val){
       `or=(codigo.ilike.*${v}*,serie.ilike.*${v}*,marca.ilike.*${v}*,modelo.ilike.*${v}*)&limit=10&order=codigo.asc`
     );
     if(dl&&rows) dl.innerHTML=rows.map(r=>`<option value="${r.codigo}">${r.tipo||''} ${r.marca||''} ${r.modelo||''} — ${r.serie||''}</option>`).join('');
+    const ae=document.activeElement;
+    if(ae&&ae.value!==val)return; // stale response
+    // single partial result only autofills from the dedicated search box, never while typing the serie
     const src=rows&&(
       rows.find(r=>r.codigo&&r.codigo.toLowerCase()===val.toLowerCase())||
       rows.find(r=>r.serie&&r.serie.toLowerCase()===val.toLowerCase())||
-      (rows.length===1?rows[0]:null)
+      (rows.length===1&&ae&&ae.id==='rep-lookup'?rows[0]:null)
     );
     if(src){
       if(src.tipo)  g('rep-tipo').value=src.tipo;
